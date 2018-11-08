@@ -5,186 +5,184 @@
 /*プログラムが入力できたら、関数調べや、プログラムの改造をしてみよう    */
 
 /*
+◎画像を学生サーバから貼り付ける
+  ・ソリューションエクスプローラーから
+	自分のプロジェクトを右クリックし、
+	エクスプローラーでフォルダを開く をクリック
+
+  ・学生共有サーバ\担当\41.G1_Win32APIの中にある
+	11月08日(木)：プログラム記入例 フォルダの
+	mon_255_alpha.bmp というファイルを コピーする
+
+  ・自分のプロジェクトが保存されているフォルダに
+	MY_BITMAP フォルダ内の
+	mon23 フォルダ内に 貼り付ける
+
+◎ヘッダーファイル読み込みに追加する
+  ・#include <math.h> の下に追加する
+
+	#include <wingdi.h>
+	#pragma comment (lib, "msimg32.lib")
+
 ◎マクロ定義に追加する
-  ・#define BMP_DRA_MS_PASS… の下に追加する
+  ・以下のようにコメントアウト
+	//ドラゴンのビットマップの場所
+	//#define BMP_DRA_PASS		TEXT(".\\MY_BITMAP\\mon23\\mon_255.bmp")
 
-    #define TIMER_ID_1	1		//タイマー１
-    #define TIMER_ID_2	2		//タイマー２
+  ・以下を追加
+	//ドラゴンのビットマップの場所（アルファチャネル付き）
+	#define BMP_DRA_PASS		TEXT(".\\MY_BITMAP\\mon23\\mon_255_alpha.bmp")
 
-◎グローバル変数に追加
-  ・MY_BMP bmp_dragon_mask;の下に追加する
-  
-  //unsigen：符号なし
-  //メインループでカウントをする変数
-  unsigned int mainLoop_cnt = 0;
+◎MY_DRAW_BITMAPに追加
+  ・SelectObject(hdc, GetStockObject(WHITE_BRUSH)); の【前の行】から追加
 
-  //タイマー１でカウントする変数
-  unsigned int timer_1_cnt = 0;
+	//+++++ 画像の拡大・縮小 ++++++++++++++++++++
 
-  //タイマー２でカウントする変数
-  unsigned int timer_2_cnt = 0;
+	//拡大縮小率(倍)
+	double rate = 2.0;
 
-◎WinMain関数の修正
-  ・一時的にコメントアウト
-  ////メッセージを受け取り続ける
-  //while (GetMessage(&msg, NULL, 0, 0))
-  //{
-  //	DispatchMessage(&msg);
-  //}
-  
-  ・while (GetMessage(&msg, NULL, 0, 0))… の下に追加
-	while (TRUE)
-	{
-		//デッドタイムを使う
-		//デッドタイム：ウィンドウがメッセージ処理をしていない時間のこと
-		//「アイドル状態」「遊休時間」などの表現方法もある
-		//→ユーザからキーボードやマウスなどの入力待ちなどで、
-		//  CPUが処理をしていない状態
+	//ビットマップの表示位置を設定
+	bmp_dragon.x = 50;
+	bmp_dragon.y = 250;
 
-		//デッドタイムか調べる(0以外→ﾒｯｾｰｼﾞ取得 / 0→ﾃﾞｯﾄﾞﾀｲﾑ)
-		BOOL PeekRet = PeekMessage(
-			&msg,		//MSG構造体のポインタ
-			NULL,		//ﾒｯｾｰｼﾞ取得ｳｨﾝﾄﾞｳのハンドル/全部ならNULL
-			0,			//メッセージの最小値 / ない場合は0
-			0,			//メッセージの最大値 / ない場合は0
-			PM_REMOVE	//メッセージキューからメッセージを削除
-		);
+	//ストレッチモードを指定
+	SetStretchBltMode(hdc, COLORONCOLOR);
 
-		if (PeekRet == TRUE)//デッドタイムでないとき
-		{
-			//メッセージがWM_QUITならループを抜ける
-			if (msg.message == WM_QUIT)
-			{ break; }
+	//ストレッチモードの種類
+	//BLACKONWHITE	残す点の色と取り除く点の色を論理 AND 演算子で結合
+	//COLORONCOLOR	取り除く点の情報を保存することなく、削除します
+	//HALFTONE		コピー先のブロックの平均的な色が、コピー元のピクセルの色に近い色
+	//				HALFTONEモードを設定した場合は、ブラシのずれを防ぐため
+	//				SetBrushOrgEx() 関数を呼び出す
+	//WHITEONBLACK	残す点の色と取り除く点の色を論理 OR 演算子で結合
+	//STRETCH_ANDSCANS		BLACKONWHITE と同じ
+	//STRETCH_DELETESCANS	COLORONCOLOR と同じです
+	//STRETCH_HALFTONE		HALFTONE と同じです
+	//STRETCH_ORSCANS		WHITEONBLACK と同じです
 
-			//他のメッセージの処理をする
-			DispatchMessage(&msg);
-		}
+	StretchBlt(
+		hdc,					//コピー先のデバイスコンテキストのハンドル
+		bmp_dragon.x,			//コピー先の長方形の左上 X座標
+		bmp_dragon.y,			//コピー先の長方形の左上 Y座標
+		bmp_dragon.width*rate,	//コピー先の長方形の右下 X座標
+		bmp_dragon.height*rate,	//コピー先の長方形の右下 X座標
+		bmp_dragon.mhdc,		//コピー元のデバイスコンテキストのハンドル
+		0,						//コピー元の長方形の左上 X座標
+		0,						//コピー元の長方形の左上 Y座標
+		bmp_dragon.width,		//コピー元の長方形の右下 X座標
+		bmp_dragon.height,		//コピー元の長方形の左上 Y座標
+		SRCCOPY					//ラスタオペレーションを指定
+	);
 
-		//デッドタイムのとき
-		if (PeekRet == FALSE)//デッドタイムのとき
-		{
-			//unsigned intの最大値より小さい場合
-			if (mainLoop_cnt < UINT_MAX)
-			{
-				mainLoop_cnt++;
+	//+++++ 画像を反転させる ++++++++++++++++++++
 
-				//無効リージョンを発生
-				InvalidateRect(hwnd, NULL, FALSE);
-				//画面を、すぐに再描画する
-				UpdateWindow(hwnd);
-			}
-		}
-	}
+	//ビットマップの表示位置を設定
+	bmp_dragon.x = 400;
+	bmp_dragon.y = 400;
 
-◎MY_DRAW関数に追加
-	・//画面の大きさを描画
+	//拡大縮小率
+	rate = 0.75;
 
-	TextOut(hdc, 100, tm.tmHeight * 1, Str_CX_CY, lstrlen(Str_CX_CY));
-	の下に追加
+	//コピー先の長方形の右下の座標に、マイナスを付加すると反転する
+	//左右反転
+	StretchBlt(
+		hdc,						//コピー先のデバイスコンテキストのハンドル
+		bmp_dragon.x,				//コピー先の長方形の左上 X座標
+		bmp_dragon.y,				//コピー先の長方形の左上 Y座標
+		-(bmp_dragon.width*rate),	//コピー先の長方形の右下 X座標
+		bmp_dragon.height*rate,		//コピー先の長方形の右下 X座標
+		bmp_dragon.mhdc,			//コピー元のデバイスコンテキストのハンドル
+		0,							//コピー元の長方形の左上 X座標
+		0,							//コピー元の長方形の左上 Y座標
+		bmp_dragon.width,			//コピー元の長方形の右下 X座標
+		bmp_dragon.height,			//コピー元の長方形の左上 Y座標
+		SRCCOPY						//ラスタオペレーションを指定
+	);
 
-	//+++++ メインループでカウント ++++++++++++++++++++
-	TCHAR Str_mainLoop_Cnt[64];
-	wsprintf(Str_mainLoop_Cnt, TEXT("メインループのカウント：%06d"), mainLoop_cnt);
-	TextOut(hdc, 100, tm.tmHeight * 2, Str_mainLoop_Cnt, lstrlen(Str_mainLoop_Cnt));
+	//+++++ 半透明な画像を表示させる ++++++++++++++++++++
 
-	//+++++ タイマー１でカウント ++++++++++++++++++++
-	TCHAR Str_Timer_1_Cnt[64];
-	wsprintf(Str_Timer_1_Cnt, TEXT("タイマー１のカウント：%06d"), timer_1_cnt);
-	TextOut(hdc, 100, tm.tmHeight * 3, Str_Timer_1_Cnt, lstrlen(Str_Timer_1_Cnt));
+	//ビットマップの表示位置を設定
+	bmp_dragon.x = 350;
+	bmp_dragon.y = 100;
 
-	//+++++ タイマー２でカウント ++++++++++++++++++++
-	TCHAR Str_Timer_2_Cnt[64];
-	wsprintf(Str_Timer_2_Cnt, TEXT("タイマー２のカウント：%06d"), timer_2_cnt);
-	TextOut(hdc, 100, tm.tmHeight * 4, Str_Timer_2_Cnt, lstrlen(Str_Timer_2_Cnt));
+	//拡大縮小率
+	rate = 2.0;
 
-◎WM_CREATEメッセージに追加
-	・SelectObject(bmp_dragon_mask.mhdc, bmp_dragon_mask.hbmp);の下に追加
+	BLENDFUNCTION bf;	//ブレンドファンクション構造体
 
-	//タイマー：ある一定の指定した時間が経過すると
-	//          メッセージキューにメッセージを送る機能
-	//          メッセージを送るということは、
-	//          マウスなどと同じ、入力装置の一つといえる
-	//分解能  ：限界周期が定められている
-	//          分解能以上の周期でメッセージを発行することはできない
-	//          Windows2000以降の、NT系の場合は10ミリ秒
-	//          1000ミリ÷10ミリ＝1秒間で100回、最大でメッセージを送れる
+	bf.BlendOp = AC_SRC_OVER;		//AC_SRC_OVERのみ
+	bf.BlendFlags = 0;				//ゼロのみ
+	bf.AlphaFormat = AC_SRC_ALPHA;	//ビットマップのアルファチャネルを使用
+	bf.SourceConstantAlpha = 100;	//透明にする割合(透明：0～255：不透明)
 
-	//タイマーを分解能(10ミリ秒)でセット(開始)
-	SetTimer(
-		hwnd,		//関連付けるウィンドウハンドル
-		TIMER_ID_1,	//タイマーのID
-		10,			//タイムアウト値(ミリ秒)
-		NULL);		//TIMERPROC型関数へのポインタ/なし はNULL
 
-	//タイマーを１秒でセット(開始)
-	SetTimer(hwnd, TIMER_ID_2, 1000, NULL);
 
-◎WM_TIMERメッセージを新たに追加
-	・case WM_CREATE: の次に、新たなcase文として追加
 
-	case WM_TIMER:
-		switch (wp)
-		{
-		case TIMER_ID_1:
-			timer_1_cnt++;
-			break;
-		case TIMER_ID_2:
-			timer_2_cnt++;
-			break;
-		}
 
-		//無効リージョンを発生
-		//WM_PAINTを、一定時間で呼び出し
-		InvalidateRect(hwnd, NULL, FALSE);
 
-		//画面を、すぐに再描画する
-		UpdateWindow(hwnd);
 
-		return 0;
 
-◎WM_LBUTTONDOWNメッセージの修正
-	・SetCapture(hwnd); の下から修正
+	//半透明で表示
+	AlphaBlend(
+		hdc,						//コピー先のデバイスコンテキストのハンドル
+		bmp_dragon.x,				//コピー先の長方形の左上 X座標
+		bmp_dragon.y,				//コピー先の長方形の左上 Y座標
+		bmp_dragon.width *rate,		//コピー先の長方形の右下 X座標
+		bmp_dragon.height*rate,		//コピー先の長方形の右下 X座標
+		bmp_dragon.mhdc,			//コピー元のデバイスコンテキストのハンドル
+		0,							//コピー元の長方形の左上 X座標
+		0,							//コピー元の長方形の左上 Y座標
+		bmp_dragon.width,			//コピー元の長方形の右下 X座標
+		bmp_dragon.height,			//コピー元の長方形の左上 Y座標
+		bf							//ブレンドファンクション構造体
+	);
 
-	//無効リージョンを発生
-	//InvalidateRect(
-	//	hwnd,	//無効リージョンを発生させるウィンドウハンドル
-	//	NULL,	//無効化する領域：NULLならクライアント領域全体
-	//	FALSE);	//TRUE：背景を消去/FALSE：背景をそのまま残す
-  
-	//画面を、すぐに再描画する
-	//WM_PAINTを直接ウィンドウプロシージャに送る関数
-	//UpdateWindow(hwnd);
+	//+++++ 画像の背景を透過して拡大・縮小 ++++++++++++++++++++
 
-◎WM_LBUTTONUPメッセージの修正
-	・ReleaseCapture(); の下から修正
+	//ビットマップの表示位置を設定
+	bmp_dragon_mask.x = 250;
+	bmp_dragon_mask.y = 350;
 
-	//無効リージョンを発生
-	//InvalidateRect(hwnd, NULL, FALSE);
+	bmp_dragon_white.x = 250;
+	bmp_dragon_white.y = 350;
 
-	//画面を、すぐに再描画する
-	//UpdateWindow(hwnd);
+	//拡大縮小率
+	rate = 1.50;
 
-◎WM_MOUSEMOVEメッセージの修正
-	・if (pt_Mouse.y >= window_Size.bottom)文の下から修正
+	//背景とマスクをANDで転送→マスクの黒い部分は無視される
+	StretchBlt(
+		hdc,							//コピー先のデバイスコンテキストのハンドル
+		bmp_dragon_mask.x,				//コピー先の長方形の左上 X座標
+		bmp_dragon_mask.y,				//コピー先の長方形の左上 Y座標
+		-(bmp_dragon_mask.width*rate),	//コピー先の長方形の右下 X座標
+		bmp_dragon_mask.height*rate,	//コピー先の長方形の右下 X座標
+		bmp_dragon_mask.mhdc,			//コピー元のデバイスコンテキストのハンドル
+		0,								//コピー元の長方形の左上 X座標
+		0,								//コピー元の長方形の左上 Y座標
+		bmp_dragon_mask.width,			//コピー元の長方形の右下 X座標
+		bmp_dragon_mask.height,			//コピー元の長方形の左上 Y座標
+		SRCPAINT						//ラスタオペレーションを指定
+	);
 
-    //無効リージョンを発生
-	//OS(Windows)が、WM_PAINTを直接ウィンドウプロシージャに送る
-	//無効リージョン(領域)は再描画される
-	//InvalidateRect(hwnd, NULL, FALSE);
+	//背景とビットマップをORで転送→ビットマップの白い背景は無視される
+	StretchBlt(
+		hdc,							//コピー先のデバイスコンテキストのハンドル
+		bmp_dragon_white.x,				//コピー先の長方形の左上 X座標
+		bmp_dragon_white.y,				//コピー先の長方形の左上 Y座標
+		-(bmp_dragon_white.width*rate),	//コピー先の長方形の右下 X座標
+		bmp_dragon_white.height*rate,	//コピー先の長方形の右下 X座標
+		bmp_dragon_white.mhdc,			//コピー元のデバイスコンテキストのハンドル
+		0,								//コピー元の長方形の左上 X座標
+		0,								//コピー元の長方形の左上 Y座標
+		bmp_dragon_white.width,			//コピー元の長方形の右下 X座標
+		bmp_dragon_white.height,		//コピー元の長方形の左上 Y座標
+		SRCAND							//ラスタオペレーションを指定
+	);
 
-	//画面を、すぐに再描画する
-	//WM_PAINTを直接ウィンドウプロシージャに送る関数
-	//UpdateWindow(hwnd);
-
-◎WM_DESTROYメッセージの修正
-	・DeleteDC(hdc_double);の下に追加
-
-	//タイマー１を削除(終了)
-	KillTimer(hwnd, TIMER_ID_2);
-
-	//タイマー２を削除(終了)
-	KillTimer(hwnd, TIMER_ID_1);
-
+◎VOID MY_SetClientSizeに追加する
+  ・SetWindowPos関数の後に追加する
+  rect_c.bottom = rect_set.bottom;
+  rect_c.right = rect_set.right;
 */
 
 
@@ -206,7 +204,7 @@
 
 
 
-
+/*
 //########## ヘッダーファイル読み込み ##########
 
 #include <windows.h>
@@ -303,9 +301,29 @@ struct MY_STRUCT_BITMAP {
 	int height;			//ビットマップの高さを取得
 };
 
-//########## 名前の再定義 ##########
+//▼▼▼▼▼ 構造体に追加 ▼▼▼▼▼
 
+struct MY_STRUCT_BALL {
+	COLORREF	color;		//ボールの色
+	int			radius;		//ボールの半径
+	int			chusin_x;	//ボールの中心(X座標)
+	int			chusin_y;	//ボールの中心(Y座標)
+	int			left;		//描画開始座標左上(X座標)
+	int			top;		//描画開始座標左上(Y座標)
+	int			right;		//描画終了座標右下(X座標)
+	int			bottom;		//描画終了座標右下(Y座標)
+	int			speed;		//ボールの速さ
+};
+
+//▲▲▲▲▲ 構造体に追加 ▲▲▲▲▲
+
+//########## 名前の再定義 ##########
 typedef MY_STRUCT_BITMAP	MY_BMP;
+
+//▼▼▼▼▼ 名前の再定義に追加 ▼▼▼▼▼
+typedef MY_STRUCT_BALL		MY_BALL;
+
+//▲▲▲▲▲ 名前の再定義に追加 ▲▲▲▲▲
 
 //########## プロトタイプ宣言 ##########
 
@@ -360,6 +378,13 @@ VOID MY_SetDoubleBufferring(HWND);
 //ビットマップを描画する関数
 VOID MY_DRAW_BITMAP(HDC);
 
+//▼▼▼▼▼ プロトタイプ宣言に追加 ▼▼▼▼▼
+
+//動くボールを描画する関数
+VOID MY_DRAW_MOVEBALL(HDC);
+
+//▲▲▲▲▲ プロトタイプ宣言に追加 ▲▲▲▲▲
+
 //########## グローバル変数の宣言と初期化 ##########
 
 //マウスの座標を管理する構造体
@@ -387,6 +412,7 @@ MY_BMP bmp_dragon_mask;
 //▼▼▼▼▼ グローバル変数に追加 ▼▼▼▼▼
 
 //unsigen：符号なし
+
 //メインループでカウントをする変数
 unsigned int mainLoop_cnt = 0;
 
@@ -395,6 +421,19 @@ unsigned int timer_1_cnt = 0;
 
 //タイマー２でカウントする変数
 unsigned int timer_2_cnt = 0;
+
+//自分で作成したボール構造体の宣言＆初期化
+MY_BALL Ball_1 = {
+	RGB(255,255,0),	//ボールの色
+	25,				//ボールの半径
+	250,			//ボールの中心(X座標)
+	250,			//ボールの中心(Y座標)
+	250 - 25,		//描画開始座標左上(X座標)
+	250 - 25,		//描画開始座標左上(Y座標)
+	250 + 25,		//描画終了座標右下(X座標)
+	250 + 25,		//描画終了座標右下(Y座標)	
+	1				//ボールの速さ
+};
 
 //▲▲▲▲▲ グローバル変数に追加 ▲▲▲▲▲
 
@@ -452,63 +491,63 @@ int WINAPI WinMain(
 
 	//▼▼▼▼▼ WinMainの修正 ▼▼▼▼▼
 
-	////一時的にコメントアウト
-	////メッセージを受け取り続ける
-	//while (GetMessage(&msg, NULL, 0, 0))
-	//{
-	//	DispatchMessage(&msg);
-	//}
+	//一時的にコメントアウト
+	//メッセージを受け取り続ける
+	while (GetMessage(&msg, NULL, 0, 0))
+	{
+		DispatchMessage(&msg);
+	}
 
 	//▲▲▲▲▲ WinMainの修正 ▲▲▲▲▲
 
 	//▼▼▼▼▼ WinMainに追加 ▼▼▼▼▼
 
-	while (TRUE)
-	{
-		//デッドタイムを使う
-		//デッドタイム：ウィンドウがメッセージ処理をしていない時間のこと
-		//「アイドル状態」「遊休時間」などの表現方法もある
-		//→ユーザからキーボードやマウスなどの入力待ちなどで、
-		//  CPUが処理をしていない状態
+	//while (TRUE)
+	//{
+	//	//デッドタイムを使う
+	//	//デッドタイム：ウィンドウがメッセージ処理をしていない時間のこと
+	//	//「アイドル状態」「遊休時間」などの表現方法もある
+	//	//→ユーザからキーボードやマウスなどの入力待ちなどで、
+	//	//  CPUが処理をしていない状態
 
-		//デッドタイムか調べる(0以外→ﾒｯｾｰｼﾞ取得 / 0→ﾃﾞｯﾄﾞﾀｲﾑ)
-		BOOL PeekRet = PeekMessage(
-			&msg,		//MSG構造体のポインタ
-			NULL,		//ﾒｯｾｰｼﾞ取得ｳｨﾝﾄﾞｳのハンドル/全部ならNULL
-			0,			//メッセージの最小値 / ない場合は0
-			0,			//メッセージの最大値 / ない場合は0
-			PM_REMOVE	//メッセージキューからメッセージを削除
-		);
+	//	//デッドタイムか調べる(0以外→ﾒｯｾｰｼﾞ取得 / 0→ﾃﾞｯﾄﾞﾀｲﾑ)
+	//	BOOL PeekRet = PeekMessage(
+	//		&msg,		//MSG構造体のポインタ
+	//		NULL,		//ﾒｯｾｰｼﾞ取得ｳｨﾝﾄﾞｳのハンドル/全部ならNULL
+	//		0,			//メッセージの最小値 / ない場合は0
+	//		0,			//メッセージの最大値 / ない場合は0
+	//		PM_REMOVE	//メッセージキューからメッセージを削除
+	//	);
 
-		//デッドタイムのとき
-		if (PeekRet == TRUE)
-		{
-			//メッセージがWM_QUITならループを抜ける
-			if (msg.message == WM_QUIT)
-			{
-				break;
-			}
+	//	//デッドタイムのとき
+	//	if (PeekRet == TRUE)
+	//	{
+	//		//メッセージがWM_QUITならループを抜ける
+	//		if (msg.message == WM_QUIT)
+	//		{
+	//			break;
+	//		}
 
-			//他のメッセージの処理をする
-			DispatchMessage(&msg);
-		}
+	//		//他のメッセージの処理をする
+	//		DispatchMessage(&msg);
+	//	}
 
-		//デッドタイムのとき
-		if (PeekRet == FALSE)
-		{
-			//unsigned intの最大値より小さい場合
-			if (mainLoop_cnt < UINT_MAX)
-			{
-				mainLoop_cnt++;
+	//	//デッドタイムのとき
+	//	if (PeekRet == FALSE)
+	//	{
+	//		//unsigned intの最大値より小さい場合
+	//		if (mainLoop_cnt < UINT_MAX)
+	//		{
+	//			mainLoop_cnt++;
 
-				//無効リージョンを発生
-				InvalidateRect(hwnd, NULL, FALSE);
+	//			//無効リージョンを発生
+	//			InvalidateRect(hwnd, NULL, FALSE);
 
-				//画面を、すぐに再描画する
-				UpdateWindow(hwnd);
-			}
-		}
-	}
+	//			//画面を、すぐに再描画する
+	//			UpdateWindow(hwnd);
+	//		}
+	//	}
+	//}
 
 	//▲▲▲▲▲ WinMainに追加 ▲▲▲▲▲
 
@@ -2132,6 +2171,81 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 
 }
 
+//########## 動くボールを描画する関数 ##########
+VOID MY_DRAW_MOVEBALL(HDC hdc)
+{
+	//ブラシを作成
+	HBRUSH hbrush = CreateSolidBrush(RGB(255, 255, 255));
+
+	//ブラシを設定
+	SelectObject(hdc, hbrush);
+
+	//四角を描画
+	Rectangle(
+		hdc,			//デバイスコンテキストのハンドル
+		rect_c.left,	//四角の左上のX座標
+		rect_c.top,		//四角の左上のY座標
+		rect_c.right,	//四角の右下のX座標
+		rect_c.bottom);	//四角の右下のY座標
+
+	//ブラシをデフォルトに戻す
+	SelectObject(hdc, GetStockObject(WHITE_BRUSH));
+
+	//ブラシを削除
+	DeleteObject(hbrush);
+
+	//+++++ ボールを描画 ++++++++++++++++++++
+
+	//ブラシを作成
+	HBRUSH hbrush_ball = CreateSolidBrush(Ball_1.color);
+
+	//ブラシを設定
+	SelectObject(hdc, hbrush_ball);
+
+
+	////ボールの中心が、クライアント領域の右よりも小さい時
+	//if (Ball_1.chusin_x > rect_c.left && Ball_1.chusin_x < rect_c.right)
+	//{
+	//	//そのままの方向に動かす
+	//	Ball_1.chusin_x += Ball_1.speed;
+	//}
+	//else
+	//{
+	//	//反対方向に動かす
+	//	Ball_1.speed = -(Ball_1.speed);
+	//	Ball_1.chusin_x += Ball_1.speed;
+	//}
+
+	//ボールを横に動かす
+	Ball_1.chusin_x += Ball_1.speed;
+
+	if (Ball_1.chusin_x + 10 > rect_c.right)
+	{
+		//反対方向に動かす
+		Ball_1.speed = -(Ball_1.speed);
+	}
+
+	//描画領域を再計算
+	Ball_1.left = Ball_1.chusin_x - Ball_1.radius;
+	Ball_1.top = Ball_1.chusin_y - Ball_1.radius;
+	Ball_1.right = Ball_1.chusin_x + Ball_1.radius;
+	Ball_1.bottom = Ball_1.chusin_y + Ball_1.radius;
+
+	//中をすべて塗りつぶす
+	SetPolyFillMode(hdc, WINDING);
+
+	//だ円を描画
+	Ellipse(hdc, Ball_1.left, Ball_1.top, Ball_1.right, Ball_1.bottom);
+
+	//ブラシをデフォルトに戻す
+	SelectObject(hdc, GetStockObject(WHITE_BRUSH));
+
+	//ブラシを削除
+	DeleteObject(hbrush_ball);
+
+
+}
+
 //########## ウィンドウプロシージャ関数 ##########
 LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
@@ -2287,7 +2401,7 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		//ウィンドウを生成するときは、0を返す
 		return 0;
 
-		//▼▼▼▼▼ WM_TIMERの追加 ▼▼▼▼▼
+		//▼▼▼▼▼ WM_CREATEの追加 ▼▼▼▼▼
 
 	case WM_TIMER:
 		switch (wp)
@@ -2309,7 +2423,7 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
 		return 0;
 
-		//▲▲▲▲▲ WM_TIMERの追加 ▲▲▲▲▲
+		//▲▲▲▲▲ WM_CREATEの追加 ▲▲▲▲▲
 
 	case WM_PAINT:
 		//ウィンドウ内を再描画するとき
@@ -2354,8 +2468,15 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		//モンスターボールを描画する
 		//MY_DRAW_MONBALL(hdc);
 
+		//▼▼▼▼▼ 開始 ▼▼▼▼▼
+
 		//ビットマップを描画する
-		MY_DRAW_BITMAP(hdc_double);
+		//MY_DRAW_BITMAP(hdc_double);
+
+		//動くボールを描画する関数
+		MY_DRAW_MOVEBALL(hdc_double);
+
+		//▲▲▲▲▲ 終了 ▲▲▲▲▲
 
 		//マウスの座標位置を描画する
 		MY_DRAW(hdc_double);
@@ -2592,3 +2713,4 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 	//デフォルトのウィンドウプロシージャ関数を呼び出す
 	return DefWindowProc(hwnd, msg, wp, lp);
 }
+*/
