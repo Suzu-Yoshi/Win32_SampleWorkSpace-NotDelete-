@@ -167,6 +167,7 @@
     <ClCompile Include="sample020.cpp" />
     <ClCompile Include="sample021.cpp" />
     <ClCompile Include="sample022.cpp" />
+    <ClCompile Include="sample022_fps.cpp" />
     <ClCompile Include="sample023.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
