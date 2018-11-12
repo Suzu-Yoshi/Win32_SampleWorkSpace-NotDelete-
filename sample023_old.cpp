@@ -5,290 +5,185 @@
 /*プログラムが入力できたら、関数調べや、プログラムの改造をしてみよう    */
 
 /*
-◎ヘッダーファイル読み込みに追加
-	・先頭に追加
+◎画像を学生サーバから貼り付ける
+  ・ソリューションエクスプローラーから
+	自分のプロジェクトを右クリックし、
+	エクスプローラーでフォルダを開く をクリック
 
-	#include <stdio.h>
-	#include <locale.h>
+  ・学生共有サーバ\担当\41.G1_Win32APIの中にある
+	11月08日(木)：プログラム記入例 フォルダの
+	mon_255_alpha.bmp というファイルを コピーする
 
-◎マクロ定義の修正
-	・コメントアウト
+  ・自分のプロジェクトが保存されているフォルダに
+	MY_BITMAP フォルダ内の
+	mon23 フォルダ内に 貼り付ける
 
-	//#define TIMER_ID_1	1		//タイマー１
-	//#define TIMER_ID_2	2		//タイマー２
+◎ヘッダーファイル読み込みに追加する
+  ・#include <math.h> の下に追加する
 
-◎マクロ定義に追加
-	・#define TIMER_ID_2	2 の下に追加する
+	#include <wingdi.h>
+	#pragma comment (lib, "msimg32.lib")
 
-	#define TIMER_ID_FPS	100	//FPSタイマー
+◎マクロ定義に追加する
+  ・以下のようにコメントアウト
+	//ドラゴンのビットマップの場所
+	//#define BMP_DRA_PASS		TEXT(".\\MY_BITMAP\\mon23\\mon_255.bmp")
 
-	#define DISP_FPS		60	//画面のFPS
-	#define AVE_FPS			60	//平均を取るサンプル数
+  ・以下を追加
+	//ドラゴンのビットマップの場所（アルファチャネル付き）
+	#define BMP_DRA_PASS		TEXT(".\\MY_BITMAP\\mon23\\mon_255_alpha.bmp")
 
-◎プロトタイプ宣言に追加
-	・VOID MY_DRAW_BITMAP(HDC); の下に追加する
+◎MY_DRAW_BITMAPに追加
+  ・SelectObject(hdc, GetStockObject(WHITE_BRUSH)); の【前の行】から追加
 
-	//画面更新の時刻を取得する関数
-	BOOL MY_FPS_UPDATE(VOID);
+	//+++++ 画像の拡大・縮小 ++++++++++++++++++++
 
-	//指定したFPSになるように待つ関数
-	VOID MY_FPS_WAIT(VOID);
+	//拡大縮小率(倍)
+	double rate = 2.0;
 
-◎グローバル変数の修正
-	・コメントアウト
+	//ビットマップの表示位置を設定
+	bmp_dragon.x = 50;
+	bmp_dragon.y = 250;
 
-	////unsigen：符号なし
-	////メインループでカウントをする変数
-	//unsigned int mainLoop_cnt = 0;
-	//
-	////タイマー１でカウントする変数
-	//unsigned int timer_1_cnt = 0;
-	//
-	////タイマー２でカウントする変数
-	//unsigned int timer_2_cnt = 0;
+	//ストレッチモードを指定
+	SetStretchBltMode(hdc, COLORONCOLOR);
 
-◎グローバル変数に追加
-	・unsigned int timer_2_cnt = 0; の下に追加する
+	//ストレッチモードの種類
+	//BLACKONWHITE	残す点の色と取り除く点の色を論理 AND 演算子で結合
+	//COLORONCOLOR	取り除く点の情報を保存することなく、削除します
+	//HALFTONE		コピー先のブロックの平均的な色が、コピー元のピクセルの色に近い色
+	//				HALFTONEモードを設定した場合は、ブラシのずれを防ぐため
+	//				SetBrushOrgEx() 関数を呼び出す
+	//WHITEONBLACK	残す点の色と取り除く点の色を論理 OR 演算子で結合
+	//STRETCH_ANDSCANS		BLACKONWHITE と同じ
+	//STRETCH_DELETESCANS	COLORONCOLOR と同じです
+	//STRETCH_HALFTONE		HALFTONE と同じです
+	//STRETCH_ORSCANS		WHITEONBLACK と同じです
 
-	//FPSのタイマーでカウントする変数
-	unsigned int timer_fps_cnt = 0;
-
-	float		fps;		//FPS
-	DWORD		fps_sta_tm;	//0フレーム目の開始時刻
-	DWORD		fps_end_tm;	//設定したフレームの終了時刻
-	DWORD		fps_count;	//フレームのカウント
-
-	
-	
-◎WinMain関数の修正
-	・コメントアウト解除
-	//メッセージを受け取り続ける
-	while (GetMessage(&msg, NULL, 0, 0))
-	{
-	DispatchMessage(&msg);
-	}
-
-	・コメントアウト
-	//メッセージを受け取り続ける
-	while (GetMessage(&msg, NULL, 0, 0))
-	{
-	DispatchMessage(&msg);
-	}
-	の【下 の while文】をコメントアウト※プログラム参考例を要参照
-
-
-◎関数の追加
-	・WinMain関数の下の任意の場所に追加
-	//########## 画面更新の時刻を取得する関数 ##########
-	BOOL MY_FPS_UPDATE(VOID)
-	{
-		//1フレーム目なら時刻を記憶
-		if (fps_count == 0)
-		{
-			//GetTickCount：
-			//Windowsが起動してから現在までの時刻を
-			//ミリ秒で取得
-			fps_sta_tm = GetTickCount();
-		}
-
-		//60フレーム目なら平均を計算する
-		if (fps_count == AVE_FPS)
-		{
-			//現在の時刻をミリ秒で取得
-			fps_end_tm = GetTickCount();
-
-			//.0f→float型で計算
-			//平均的なFPS値を計算
-			fps = 1000.0f / ((fps_end_tm - fps_sta_tm) / (float)AVE_FPS);
-
-			fps_sta_tm = fps_end_tm;
-			fps_count = 0;
-		}
-
-		fps_count++;
-
-		return true;
-	}
-
-	//########## 指定したFPSになるように待つ関数 ##########
-	VOID MY_FPS_WAIT(VOID)
-	{
-		//現在の時刻をミリ秒で取得
-		DWORD now_tm = GetTickCount();
-
-		//1フレーム目から実際にかかった時間を計算
-		DWORD keika_tm = now_tm - fps_sta_tm;
-
-		//待つべき時間 = かかるべき時間 - 実際にかかった時間;
-		DWORD wait_tm = (fps_count * 1000 / DISP_FPS) - (keika_tm);
-
-		//待つべき時間があった場合
-		if (wait_tm > 0 && wait_tm < 2000)
-		{
-			//ミリ秒分、処理を中断する
-			Sleep(wait_tm);
-		}
-	}
-
-◎MY_DRAWを修正
-	・コメントアウト
-	////+++++ メインループでカウント ++++++++++++++++++++
-	//TCHAR Str_mainLoop_Cnt[64];
-	//wsprintf(Str_mainLoop_Cnt, TEXT("メインループのカウント：%06d"), mainLoop_cnt);
-	//TextOut(hdc, 100, tm.tmHeight * 2, Str_mainLoop_Cnt, lstrlen(Str_mainLoop_Cnt));
-
-	////+++++ タイマー１でカウント ++++++++++++++++++++
-	//TCHAR Str_Timer_1_Cnt[64];
-	//wsprintf(Str_Timer_1_Cnt, TEXT("タイマー１のカウント：%06d"), timer_1_cnt);
-	//TextOut(hdc, 100, tm.tmHeight * 3, Str_Timer_1_Cnt, lstrlen(Str_Timer_1_Cnt));
-
-	////+++++ タイマー２でカウント ++++++++++++++++++++
-	//TCHAR Str_Timer_2_Cnt[64];
-	//wsprintf(Str_Timer_2_Cnt, TEXT("タイマー２のカウント：%06d"), timer_2_cnt);
-	//TextOut(hdc, 100, tm.tmHeight * 4, Str_Timer_2_Cnt, lstrlen(Str_Timer_2_Cnt));
-	
-◎MY_DRAWに追加
-	・タイマー２でカウントの TextOut() の下に追加
-	//+++++ FPSを表示 ++++++++++++++++++++
-
-	//FPS値を整形するための変数
-	CHAR Str_fps_C[64];
-	size_t wLen = 0;
-	errno_t err = 0;
-
-	//FPS値を整形
-	sprintf(Str_fps_C, "FPS：%03.1lf", fps);
-
-	//FPS値を表示するための変数
-	TCHAR Str_fps_W[64];
-
-	//ロケール指定
-	setlocale(LC_ALL, "japanese");
-
-	//文字列をマルチバイト文字からワイド文字に変換
-	err = mbstowcs_s(
-		&wLen,				//変換された文字数
-		Str_fps_W,			//変換されたワイド文字
-		strlen(Str_fps_C),	//変換する文字数
-		Str_fps_C,			//変換するマルチバイト文字
-		_TRUNCATE			//バッファに収まるだけの文字列まで変換
+	StretchBlt(
+		hdc,					//コピー先のデバイスコンテキストのハンドル
+		bmp_dragon.x,			//コピー先の長方形の左上 X座標
+		bmp_dragon.y,			//コピー先の長方形の左上 Y座標
+		bmp_dragon.width*rate,	//コピー先の長方形の右下 X座標
+		bmp_dragon.height*rate,	//コピー先の長方形の右下 X座標
+		bmp_dragon.mhdc,		//コピー元のデバイスコンテキストのハンドル
+		0,						//コピー元の長方形の左上 X座標
+		0,						//コピー元の長方形の左上 Y座標
+		bmp_dragon.width,		//コピー元の長方形の右下 X座標
+		bmp_dragon.height,		//コピー元の長方形の左上 Y座標
+		SRCCOPY					//ラスタオペレーションを指定
 	);
 
-	TextOut(hdc, 100, tm.tmHeight * 2, Str_fps_W, lstrlen(Str_fps_W));
+	//+++++ 画像を反転させる ++++++++++++++++++++
 
-	
-	
-	
-	
-	
-	
-	
-	
-◎WM_CREATEの修正
+	//ビットマップの表示位置を設定
+	bmp_dragon.x = 400;
+	bmp_dragon.y = 400;
 
-	・コメントアウト
-	////タイマーを分解能(10ミリ秒)でセット(開始)
-	//SetTimer(
-	//	hwnd,		//関連付けるウィンドウハンドル
-	//	TIMER_ID_1,	//タイマーのID
-	//	10,			//タイムアウト値(ミリ秒)
-	//	NULL);		//TIMERPROC型関数へのポインタ/なし はNULL
+	//拡大縮小率
+	rate = 0.75;
 
-	//				//タイマーを１秒でセット(開始)
-	//SetTimer(hwnd, TIMER_ID_2, 1000, NULL);
+	//コピー先の長方形の右下の座標に、マイナスを付加すると反転する
+	//左右反転
+	StretchBlt(
+		hdc,						//コピー先のデバイスコンテキストのハンドル
+		bmp_dragon.x,				//コピー先の長方形の左上 X座標
+		bmp_dragon.y,				//コピー先の長方形の左上 Y座標
+		-(bmp_dragon.width*rate),	//コピー先の長方形の右下 X座標
+		bmp_dragon.height*rate,		//コピー先の長方形の右下 X座標
+		bmp_dragon.mhdc,			//コピー元のデバイスコンテキストのハンドル
+		0,							//コピー元の長方形の左上 X座標
+		0,							//コピー元の長方形の左上 Y座標
+		bmp_dragon.width,			//コピー元の長方形の右下 X座標
+		bmp_dragon.height,			//コピー元の長方形の左上 Y座標
+		SRCCOPY						//ラスタオペレーションを指定
+	);
 
-◎WM_CREATEの追加
+	//+++++ 半透明な画像を表示させる ++++++++++++++++++++
 
-	・SetTimer(hwnd, TIMER_ID_2, 1000, NULL); の下に追加
-	//タイマーを10ミリ間隔にセット(開始)
-	SetTimer(hwnd, TIMER_ID_FPS, 10, NULL);
+	//ビットマップの表示位置を設定
+	bmp_dragon.x = 350;
+	bmp_dragon.y = 100;
 
-◎WM_TIMERの修正
-	・コメントアウト
-	//	switch (wp)
-	//	{
-	//	case TIMER_ID_1:
-	//		timer_1_cnt++;
-	//		break;
-	//	case TIMER_ID_2:
-	//		timer_2_cnt++;
-	//		break;
-	//	}
+	//拡大縮小率
+	rate = 2.0;
 
-◎WM_TIMERの追加
-	・switch (wp)文 の下に追加
-	switch (wp)
-	{
-		case TIMER_ID_FPS:
+	BLENDFUNCTION bf;	//ブレンドファンクション構造体
 
-		//画面更新の時刻を取得する
-		MY_FPS_UPDATE();
+	bf.BlendOp = AC_SRC_OVER;		//AC_SRC_OVERのみ
+	bf.BlendFlags = 0;				//ゼロのみ
+	bf.AlphaFormat = AC_SRC_ALPHA;	//ビットマップのアルファチャネルを使用
+	bf.SourceConstantAlpha = 100;	//透明にする割合(透明：0～255：不透明)
 
-		//無効リージョンを発生
-		//WM_PAINTを、一定時間で呼び出し
-		InvalidateRect(hwnd, NULL, FALSE);
 
-		//画面を、すぐに再描画する
-		UpdateWindow(hwnd);
 
-		//指定したFPSになるように待つ
-		MY_FPS_WAIT();
 
-		break;
-	}
 
-◎WM_DESTROYの修正
-	・コメントアウト
 
-	////タイマー１を削除(終了)
-	//KillTimer(hwnd, TIMER_ID_2);
 
-	////タイマー２を削除(終了)
-	//KillTimer(hwnd, TIMER_ID_1);
 
-◎WM_DESTROYの追加
-	・KillTimer(hwnd, TIMER_ID_1); の下に追加
+	//半透明で表示
+	AlphaBlend(
+		hdc,						//コピー先のデバイスコンテキストのハンドル
+		bmp_dragon.x,				//コピー先の長方形の左上 X座標
+		bmp_dragon.y,				//コピー先の長方形の左上 Y座標
+		bmp_dragon.width *rate,		//コピー先の長方形の右下 X座標
+		bmp_dragon.height*rate,		//コピー先の長方形の右下 X座標
+		bmp_dragon.mhdc,			//コピー元のデバイスコンテキストのハンドル
+		0,							//コピー元の長方形の左上 X座標
+		0,							//コピー元の長方形の左上 Y座標
+		bmp_dragon.width,			//コピー元の長方形の右下 X座標
+		bmp_dragon.height,			//コピー元の長方形の左上 Y座標
+		bf							//ブレンドファンクション構造体
+	);
 
-	//FPSタイマーを削除(終了)
-	KillTimer(hwnd, TIMER_ID_FPS);
+	//+++++ 画像の背景を透過して拡大・縮小 ++++++++++++++++++++
 
+	//ビットマップの表示位置を設定
+	bmp_dragon_mask.x = 250;
+	bmp_dragon_mask.y = 350;
+
+	bmp_dragon_white.x = 250;
+	bmp_dragon_white.y = 350;
+
+	//拡大縮小率
+	rate = 1.50;
+
+	//背景とマスクをANDで転送→マスクの黒い部分は無視される
+	StretchBlt(
+		hdc,							//コピー先のデバイスコンテキストのハンドル
+		bmp_dragon_mask.x,				//コピー先の長方形の左上 X座標
+		bmp_dragon_mask.y,				//コピー先の長方形の左上 Y座標
+		-(bmp_dragon_mask.width*rate),	//コピー先の長方形の右下 X座標
+		bmp_dragon_mask.height*rate,	//コピー先の長方形の右下 X座標
+		bmp_dragon_mask.mhdc,			//コピー元のデバイスコンテキストのハンドル
+		0,								//コピー元の長方形の左上 X座標
+		0,								//コピー元の長方形の左上 Y座標
+		bmp_dragon_mask.width,			//コピー元の長方形の右下 X座標
+		bmp_dragon_mask.height,			//コピー元の長方形の左上 Y座標
+		SRCPAINT						//ラスタオペレーションを指定
+	);
+
+	//背景とビットマップをORで転送→ビットマップの白い背景は無視される
+	StretchBlt(
+		hdc,							//コピー先のデバイスコンテキストのハンドル
+		bmp_dragon_white.x,				//コピー先の長方形の左上 X座標
+		bmp_dragon_white.y,				//コピー先の長方形の左上 Y座標
+		-(bmp_dragon_white.width*rate),	//コピー先の長方形の右下 X座標
+		bmp_dragon_white.height*rate,	//コピー先の長方形の右下 X座標
+		bmp_dragon_white.mhdc,			//コピー元のデバイスコンテキストのハンドル
+		0,								//コピー元の長方形の左上 X座標
+		0,								//コピー元の長方形の左上 Y座標
+		bmp_dragon_white.width,			//コピー元の長方形の右下 X座標
+		bmp_dragon_white.height,		//コピー元の長方形の左上 Y座標
+		SRCAND							//ラスタオペレーションを指定
+	);
+
+◎VOID MY_SetClientSizeに追加する
+  ・SetWindowPos関数の後に追加する
+  rect_c.bottom = rect_set.bottom;
+  rect_c.right = rect_set.right;
 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -311,13 +206,6 @@
 
 /*
 //########## ヘッダーファイル読み込み ##########
-
-//▼▼▼▼▼ ヘッダーファイル読み込みに追加 ▼▼▼▼▼
-
-#include <stdio.h>
-#include <locale.h>
-
-//▲▲▲▲▲ ヘッダーファイル読み込みに追加 ▲▲▲▲▲
 
 #include <windows.h>
 #include <math.h>
@@ -385,20 +273,10 @@
 #define BMP_DRA_WH_PASS	TEXT(".\\MY_BITMAP\\mon23\\mon_255_white.bmp")	//ドラゴンのビットマップ(背景白)の場所
 #define BMP_DRA_MS_PASS	TEXT(".\\MY_BITMAP\\mon23\\mon_255_bw.bmp")		//ドラゴンのマスクの場所
 
-//▼▼▼▼▼ マクロ定義の修正 ▼▼▼▼▼
-
-////コメントアウト
-//#define TIMER_ID_1	1		//タイマー１
-//#define TIMER_ID_2	2		//タイマー２
-
-//▲▲▲▲▲ マクロ定義の修正 ▲▲▲▲▲
-
 //▼▼▼▼▼ マクロ定義に追加 ▼▼▼▼▼
 
-#define TIMER_ID_FPS	100	//FPSタイマー
-
-#define DISP_FPS		60	//画面のFPS
-#define AVE_FPS			60	//平均を取るサンプル数
+#define TIMER_ID_1	1		//タイマー１
+#define TIMER_ID_2	2		//タイマー２
 
 //▲▲▲▲▲ マクロ定義に追加 ▲▲▲▲▲
 
@@ -423,9 +301,29 @@ struct MY_STRUCT_BITMAP {
 	int height;			//ビットマップの高さを取得
 };
 
-//########## 名前の再定義 ##########
+//▼▼▼▼▼ 構造体に追加 ▼▼▼▼▼
 
+struct MY_STRUCT_BALL {
+	COLORREF	color;		//ボールの色
+	int			radius;		//ボールの半径
+	int			chusin_x;	//ボールの中心(X座標)
+	int			chusin_y;	//ボールの中心(Y座標)
+	int			left;		//描画開始座標左上(X座標)
+	int			top;		//描画開始座標左上(Y座標)
+	int			right;		//描画終了座標右下(X座標)
+	int			bottom;		//描画終了座標右下(Y座標)
+	int			speed;		//ボールの速さ
+};
+
+//▲▲▲▲▲ 構造体に追加 ▲▲▲▲▲
+
+//########## 名前の再定義 ##########
 typedef MY_STRUCT_BITMAP	MY_BMP;
+
+//▼▼▼▼▼ 名前の再定義に追加 ▼▼▼▼▼
+typedef MY_STRUCT_BALL		MY_BALL;
+
+//▲▲▲▲▲ 名前の再定義に追加 ▲▲▲▲▲
 
 //########## プロトタイプ宣言 ##########
 
@@ -482,11 +380,8 @@ VOID MY_DRAW_BITMAP(HDC);
 
 //▼▼▼▼▼ プロトタイプ宣言に追加 ▼▼▼▼▼
 
-//画面更新の時刻を取得する関数
-BOOL MY_FPS_UPDATE(VOID);
-
-//指定したFPSになるように待つ関数
-VOID MY_FPS_WAIT(VOID);
+//動くボールを描画する関数
+VOID MY_DRAW_MOVEBALL(HDC);
 
 //▲▲▲▲▲ プロトタイプ宣言に追加 ▲▲▲▲▲
 
@@ -502,7 +397,7 @@ RECT window_Size = { 0, 0, 0, 0 };
 RECT rect_w;	//ウィンドウ領域を管理
 RECT rect_c;	//クライアント領域を管理
 
-				//ウィンドウのモードを設定
+//ウィンドウのモードを設定
 int win_mode = (int)WIN_RESZ_OK;
 
 //ダブルバッファリング用
@@ -514,29 +409,31 @@ MY_BMP bmp_dragon;
 MY_BMP bmp_dragon_white;
 MY_BMP bmp_dragon_mask;
 
-//▼▼▼▼▼ グローバル変数の修正 ▼▼▼▼▼
-//コメントアウト
-////unsigen：符号なし
-////メインループでカウントをする変数
-//unsigned int mainLoop_cnt = 0;
-//
-////タイマー１でカウントする変数
-//unsigned int timer_1_cnt = 0;
-//
-////タイマー２でカウントする変数
-//unsigned int timer_2_cnt = 0;
-
-//▲▲▲▲▲ グローバル変数の修正 ▲▲▲▲▲
-
 //▼▼▼▼▼ グローバル変数に追加 ▼▼▼▼▼
 
-//FPSのタイマーでカウントする変数
-unsigned int timer_fps_cnt = 0;	
+//unsigen：符号なし
 
-float		fps;		//FPS
-DWORD		fps_sta_tm;	//0フレーム目の開始時刻
-DWORD		fps_end_tm;	//設定したフレームの終了時刻
-DWORD		fps_count;	//フレームのカウント
+//メインループでカウントをする変数
+unsigned int mainLoop_cnt = 0;
+
+//タイマー１でカウントする変数
+unsigned int timer_1_cnt = 0;
+
+//タイマー２でカウントする変数
+unsigned int timer_2_cnt = 0;
+
+//自分で作成したボール構造体の宣言＆初期化
+MY_BALL Ball_1 = {
+	RGB(255,255,0),	//ボールの色
+	25,				//ボールの半径
+	250,			//ボールの中心(X座標)
+	250,			//ボールの中心(Y座標)
+	250 - 25,		//描画開始座標左上(X座標)
+	250 - 25,		//描画開始座標左上(Y座標)
+	250 + 25,		//描画終了座標右下(X座標)
+	250 + 25,		//描画終了座標右下(Y座標)	
+	1				//ボールの速さ
+};
 
 //▲▲▲▲▲ グローバル変数に追加 ▲▲▲▲▲
 
@@ -592,21 +489,19 @@ int WINAPI WinMain(
 	//ウィンドウを表示
 	ShowWindow(hwnd, SW_SHOW);
 
-
 	//▼▼▼▼▼ WinMainの修正 ▼▼▼▼▼
-	//コメントアウト解除
 
+	//一時的にコメントアウト
 	//メッセージを受け取り続ける
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		DispatchMessage(&msg);
-
 	}
+
 	//▲▲▲▲▲ WinMainの修正 ▲▲▲▲▲
 
+	//▼▼▼▼▼ WinMainに追加 ▼▼▼▼▼
 
-	//▼▼▼▼▼ WinMainの修正 ▼▼▼▼▼
-	////コメントアウト
 	//while (TRUE)
 	//{
 	//	//デッドタイムを使う
@@ -653,66 +548,11 @@ int WINAPI WinMain(
 	//		}
 	//	}
 	//}
-	//▲▲▲▲▲ WinMainの修正 ▲▲▲▲▲
+
+	//▲▲▲▲▲ WinMainに追加 ▲▲▲▲▲
 
 	return msg.wParam;
 }
-
-//▼▼▼▼▼ 関数を追加 ▼▼▼▼▼
-
-//########## 画面更新の時刻を取得する関数 ##########
-BOOL MY_FPS_UPDATE(VOID)
-{
-	//1フレーム目なら時刻を記憶
-	if (fps_count == 0)
-	{
-		//GetTickCount：
-		//Windowsが起動してから現在までの時刻を
-		//ミリ秒で取得
-		fps_sta_tm = GetTickCount();
-	}
-
-	//60フレーム目なら平均を計算する
-	if (fps_count == AVE_FPS)
-	{
-		//現在の時刻をミリ秒で取得
-		fps_end_tm = GetTickCount();
-
-		//.0f→float型で計算
-		//平均的なFPS値を計算
-		fps = 1000.0f / ((fps_end_tm - fps_sta_tm) / (float)AVE_FPS);
-		
-		fps_sta_tm = fps_end_tm;
-		fps_count = 0;
-
-	}
-
-	fps_count++;
-
-	return true;
-}
-
-//########## 指定したFPSになるように待つ関数 ##########
-VOID MY_FPS_WAIT(VOID)
-{
-	//現在の時刻をミリ秒で取得
-	DWORD now_tm = GetTickCount();
-
-	//1フレーム目から実際にかかった時間を計算
-	DWORD keika_tm = now_tm - fps_sta_tm;
-	
-	//待つべき時間 = かかるべき時間 - 実際にかかった時間;
-	DWORD wait_tm = (fps_count * 1000 / DISP_FPS) - (keika_tm);
-
-	//待つべき時間があった場合
-	if (wait_tm > 0 && wait_tm < 2000)
-	{
-		//ミリ秒分、処理を中断する
-		Sleep(wait_tm);
-	}
-}
-
-//▲▲▲▲▲ 関数を追加 ▲▲▲▲▲
 
 //########## ダブルバッファリングの設定をする関数 ##########
 VOID MY_SetDoubleBufferring(HWND hWnd)
@@ -870,7 +710,7 @@ VOID MY_SetClientSize(HWND hWnd)
 		rect_set.bottom,		//ウィンドウの高さ
 		SWP_SHOWWINDOW);		//ウィンドウを表示
 
-								//サイズを同じにする
+	//サイズを同じにする
 	rect_c.bottom = rect_set.bottom;
 	rect_c.right = rect_set.right;
 
@@ -900,7 +740,7 @@ VOID MY_DRAW(HDC hdc)
 	SetTextColor(hdc, RGB(0, 0, 0));		//文字色を白にする
 	SetBkColor(hdc, RGB(255, 255, 255));	//背景色を黒にする
 
-											//マウスの座標を整形
+	//マウスの座標を整形
 	wsprintf(Str_X_Y, TEXT("マウスの位置(X:%03d,Y:%03d)"), pt_Mouse.x, pt_Mouse.y);
 
 	//マウスの座標を描画
@@ -912,53 +752,24 @@ VOID MY_DRAW(HDC hdc)
 	//画面の大きさを描画
 	TextOut(hdc, 100, tm.tmHeight * 1, Str_CX_CY, lstrlen(Str_CX_CY));
 
-	//▼▼▼▼▼ MY_DRAWを修正 ▼▼▼▼▼
+	//▼▼▼▼▼ MY_DRAW 関数に追加 ▼▼▼▼▼
 
-	////+++++ メインループでカウント ++++++++++++++++++++
-	//TCHAR Str_mainLoop_Cnt[64];
-	//wsprintf(Str_mainLoop_Cnt, TEXT("メインループのカウント：%06d"), mainLoop_cnt);
-	//TextOut(hdc, 100, tm.tmHeight * 2, Str_mainLoop_Cnt, lstrlen(Str_mainLoop_Cnt));
+	//+++++ メインループでカウント ++++++++++++++++++++
+	TCHAR Str_mainLoop_Cnt[64];
+	wsprintf(Str_mainLoop_Cnt, TEXT("メインループのカウント：%06d"), mainLoop_cnt);
+	TextOut(hdc, 100, tm.tmHeight * 2, Str_mainLoop_Cnt, lstrlen(Str_mainLoop_Cnt));
 
-	////+++++ タイマー１でカウント ++++++++++++++++++++
-	//TCHAR Str_Timer_1_Cnt[64];
-	//wsprintf(Str_Timer_1_Cnt, TEXT("タイマー１のカウント：%06d"), timer_1_cnt);
-	//TextOut(hdc, 100, tm.tmHeight * 3, Str_Timer_1_Cnt, lstrlen(Str_Timer_1_Cnt));
+	//+++++ タイマー１でカウント ++++++++++++++++++++
+	TCHAR Str_Timer_1_Cnt[64];
+	wsprintf(Str_Timer_1_Cnt, TEXT("タイマー１のカウント：%06d"), timer_1_cnt);
+	TextOut(hdc, 100, tm.tmHeight * 3, Str_Timer_1_Cnt, lstrlen(Str_Timer_1_Cnt));
 
-	////+++++ タイマー２でカウント ++++++++++++++++++++
-	//TCHAR Str_Timer_2_Cnt[64];
-	//wsprintf(Str_Timer_2_Cnt, TEXT("タイマー２のカウント：%06d"), timer_2_cnt);
-	//TextOut(hdc, 100, tm.tmHeight * 4, Str_Timer_2_Cnt, lstrlen(Str_Timer_2_Cnt));
-	//▲▲▲▲▲ MY_DRAWを修正 ▲▲▲▲▲
+	//+++++ タイマー２でカウント ++++++++++++++++++++
+	TCHAR Str_Timer_2_Cnt[64];
+	wsprintf(Str_Timer_2_Cnt, TEXT("タイマー２のカウント：%06d"), timer_2_cnt);
+	TextOut(hdc, 100, tm.tmHeight * 4, Str_Timer_2_Cnt, lstrlen(Str_Timer_2_Cnt));
 
-	//▼▼▼▼▼ MY_DRAWを追加 ▼▼▼▼▼
-	//+++++ FPSを表示 ++++++++++++++++++++
-	
-	//FPS値を整形するための変数
-	CHAR Str_fps_C[64];
-	size_t wLen = 0;
-	errno_t err = 0;
-
-	//FPS値を整形
-	sprintf(Str_fps_C, "FPS：%03.1lf", fps);
-
-	//FPS値を表示するための変数
-	TCHAR Str_fps_W[64];
-
-	//ロケール指定
-	setlocale(LC_ALL, "japanese");
-
-	//文字列をマルチバイト文字からワイド文字に変換
-	err = mbstowcs_s(
-		&wLen,				//変換された文字数
-		Str_fps_W,			//変換されたワイド文字
-		strlen(Str_fps_C),	//変換する文字数
-		Str_fps_C,			//変換するマルチバイト文字
-		_TRUNCATE			//バッファに収まるだけの文字列まで変換
-	);
-
-	TextOut(hdc, 100, tm.tmHeight * 2, Str_fps_W, lstrlen(Str_fps_W));
-
-	//▲▲▲▲▲ MY_DRAWを追加 ▲▲▲▲▲
+	//▲▲▲▲▲ MY_DRAW 関数に追加 ▲▲▲▲▲
 }
 
 //########## フォントを設定して文字を描画する ##########
@@ -1128,47 +939,47 @@ VOID MY_DRAW_LINE(HDC hdc)
 		pt_line.y,			//描き始めるY座標
 		NULL);				//以前のカレントポジション取得/必要ないならNULL
 
-							//線を描く(縦棒)
+	//線を描く(縦棒)
 	LineTo(
 		hdc,				//デバイスコンテキストのハンドル
 		pt_line.x,			//描き終わるX座標
 		pt_line.y + 200);	//描き終わるY座標
 
-							//線をどこから描き始めるか設定する
+	//線をどこから描き始めるか設定する
 	MoveToEx(
 		hdc,				//デバイスコンテキストのハンドル
 		pt_line.x,			//描き始めるX座標
 		pt_line.y,			//描き始めるY座標
 		NULL);				//以前のカレントポジション/必要ないならNULL
 
-							//線を描く(横棒)
+	//線を描く(横棒)
 	LineTo(
 		hdc,				//デバイスコンテキストのハンドル
 		pt_line.x + 200,	//描き終わるX座標
 		pt_line.y);		//描き終わるY座標
 
-						//線をどこから描き始めるか設定する
+	//線をどこから描き始めるか設定する
 	MoveToEx(
 		hdc,				//デバイスコンテキストのハンドル
 		pt_line.x,			//描き始めるX座標
 		pt_line.y,			//描き始めるY座標
 		NULL);				//以前のカレントポジション/必要ないならNULL
 
-							//線を描く(斜め棒)
+	//線を描く(斜め棒)
 	LineTo(
 		hdc,				//デバイスコンテキストのハンドル
 		pt_line.x + 200,	//描き終わるX座標
 		pt_line.y + 200);	//描き終わるY座標
 
-							//++++++++++++++++++++++++++++++++++++++++
-							//連続した線の描画を描く
-							//++++++++++++++++++++++++++++++++++++++++
+   //++++++++++++++++++++++++++++++++++++++++
+   //連続した線の描画を描く
+   //++++++++++++++++++++++++++++++++++++++++
 
-							//連続した線の座標
+	//連続した線の座標
 	POINT pt_ren[5];
 	int POINT_CNT = 5;	//座標の数
 
-						//四角の左上
+	//四角の左上
 	pt_ren[0].x = 50;
 	pt_ren[0].y = 300;
 
@@ -1216,7 +1027,7 @@ VOID MY_DRAW_LINE(HDC hdc)
 
 	int LINE_HUKU_CNT = 2;	//線の数
 
-							//連続した線の座標
+	//連続した線の座標
 	DWORD split[2] = {
 		3,	//３つでまとめる
 		4 };	//４つでまとめる
@@ -1281,11 +1092,11 @@ VOID MY_DRAW_GRAPH(HDC hdc)
 		rect_sq.right,		//四角の右下のX座標
 		rect_sq.bottom);	//四角の右下のY座標
 
-							//++++++++++++++++++++++++++++++++++++++++
-							//角が丸い四角を描画
-							//++++++++++++++++++++++++++++++++++++++++
+	//++++++++++++++++++++++++++++++++++++++++
+	//角が丸い四角を描画
+	//++++++++++++++++++++++++++++++++++++++++
 
-							//線をどこから描き始めるか設定する
+	//線をどこから描き始めるか設定する
 	MoveToEx(hdc, rect_sq.left, rect_sq.top, NULL);
 
 	//四角を描画
@@ -1298,11 +1109,11 @@ VOID MY_DRAW_GRAPH(HDC hdc)
 		50,						//角の丸みの横幅
 		50);					//角の丸みの縦幅
 
-								//++++++++++++++++++++++++++++++++++++++++
-								//楕円を描画
-								//++++++++++++++++++++++++++++++++++++++++
+	//++++++++++++++++++++++++++++++++++++++++
+	//楕円を描画
+	//++++++++++++++++++++++++++++++++++++++++
 
-								//図形の座標を設定
+	//図形の座標を設定
 	RECT rect_eli = {
 		180,180,	//左上の座標
 		320,320		//右下の座標
@@ -1319,11 +1130,11 @@ VOID MY_DRAW_GRAPH(HDC hdc)
 		rect_eli.right,		//楕円の右下のX座標
 		rect_eli.bottom);	//楕円の右下のY座標
 
-							//++++++++++++++++++++++++++++++++++++++++
-							//弧を描画
-							//++++++++++++++++++++++++++++++++++++++++
+	//++++++++++++++++++++++++++++++++++++++++
+	//弧を描画
+	//++++++++++++++++++++++++++++++++++++++++
 
-							//楕円の半径を取得
+	//楕円の半径を取得
 	int hankei = (rect_eli.right - rect_eli.left) / 2;
 
 	//楕円の中心を取得
@@ -1357,7 +1168,7 @@ VOID MY_DRAW_GRAPH(HDC hdc)
 		pt_ko_end.x,			//弧の終点のX座標
 		pt_ko_end.y);			//弧の終点のY座標
 
-								//弓形を描画
+	//弓形を描画
 	Chord(
 		hdc,
 		rect_eli.left + 10,		//円の左上のX座標
@@ -1369,7 +1180,7 @@ VOID MY_DRAW_GRAPH(HDC hdc)
 		pt_ko_end.x,			//弧の終点のX座標
 		pt_ko_end.y);			//弧の終点のY座標
 
-								//扇形を描画
+	//扇形を描画
 	Pie(
 		hdc,
 		rect_eli.left + 10,		//円の左上のX座標
@@ -1395,14 +1206,14 @@ VOID MY_DRAW_PEN(HDC hdc)
 		5,					//ペンの太さ
 		RGB(255, 0, 0));	//ペンの色
 
-							//ペンのタイプ
-							//PS_SOLID		実線のペン
-							//PS_DASH		破線のペン
-							//PS_DOT		点線のペン
-							//PS_DASHDOT	一点鎖線のペン
-							//PS_DASHDOTDOT	二点鎖線のペン
+	//ペンのタイプ
+	//PS_SOLID		実線のペン
+	//PS_DASH		破線のペン
+	//PS_DOT		点線のペン
+	//PS_DASHDOT	一点鎖線のペン
+	//PS_DASHDOTDOT	二点鎖線のペン
 
-							//ペンを設定
+	//ペンを設定
 	SelectObject(hdc, hpen);
 
 	//図形の座標を設定
@@ -1422,7 +1233,7 @@ VOID MY_DRAW_PEN(HDC hdc)
 		rect_sq.right,		//四角の右下のX座標
 		rect_sq.bottom);	//四角の右下のY座標
 
-							//ペンをデフォルトに戻す
+	//ペンをデフォルトに戻す
 	SelectObject(hdc, GetStockObject(BLACK_PEN));
 
 	//ペンを削除
@@ -1443,7 +1254,7 @@ VOID MY_DRAW_BRUSH(HDC hdc)
 	hbrush = CreateSolidBrush(
 		RGB(255, 0, 0));//ブラシの色
 
-						//ブラシを設定
+	//ブラシを設定
 	SelectObject(hdc, hbrush);
 
 	//図形の座標を設定
@@ -1463,7 +1274,7 @@ VOID MY_DRAW_BRUSH(HDC hdc)
 		rect_sq.right,		//四角の右下のX座標
 		rect_sq.bottom);	//四角の右下のY座標
 
-							//ブラシをデフォルトに戻す
+	//ブラシをデフォルトに戻す
 	SelectObject(hdc, GetStockObject(WHITE_BRUSH));
 
 	//ブラシを削除
@@ -1481,15 +1292,15 @@ VOID MY_DRAW_BRUSH(HDC hdc)
 		HS_CROSS,			//ブラシの模様
 		RGB(255, 0, 0));	//ブラシの色
 
-							//ブラシの模様
-							//HS_BDIAGONAL	45 度の右下がりのハッチ
-							//HS_CROSS		水平と垂直のクロスハッチ
-							//HS_DIAGCROSS	45 度のクロスハッチ
-							//HS_FDIAGONAL	45 度の右上がりのハッチ
-							//HS_HORIZONTAL	水平ハッチ
-							//HS_VERTICAL	垂直ハッチ
+	//ブラシの模様
+	//HS_BDIAGONAL	45 度の右下がりのハッチ
+	//HS_CROSS		水平と垂直のクロスハッチ
+	//HS_DIAGCROSS	45 度のクロスハッチ
+	//HS_FDIAGONAL	45 度の右上がりのハッチ
+	//HS_HORIZONTAL	水平ハッチ
+	//HS_VERTICAL	垂直ハッチ
 
-							//ブラシを設定
+	//ブラシを設定
 	SelectObject(hdc, hbrush_2);
 
 	//図形の座標を設定
@@ -1509,7 +1320,7 @@ VOID MY_DRAW_BRUSH(HDC hdc)
 		rect_sq_2.right,		//四角の右下のX座標
 		rect_sq_2.bottom);	//四角の右下のY座標
 
-							//ブラシをデフォルトに戻す
+		//ブラシをデフォルトに戻す
 	SelectObject(hdc, GetStockObject(WHITE_BRUSH));
 
 	//ブラシを削除
@@ -1530,7 +1341,7 @@ VOID MY_DRAW_POLYGON(HDC hdc)
 		1,					//ペンの太さ
 		RGB(0, 0, 0));		//ペンの色
 
-							//ペンを設定
+	//ペンを設定
 	SelectObject(hdc, hpen);
 
 	//ブラシ：塗りつぶす色、模様などを設定
@@ -1540,7 +1351,7 @@ VOID MY_DRAW_POLYGON(HDC hdc)
 	hbrush = CreateSolidBrush(
 		RGB(255, 0, 0));//ブラシの色
 
-						//ブラシを設定
+	//ブラシを設定
 	SelectObject(hdc, hbrush);
 
 	//++++++++++++++++++++++++++++++++++++++++
@@ -1586,11 +1397,11 @@ VOID MY_DRAW_POLYGON(HDC hdc)
 		rect_po,	//多角形の座標
 		kaku_cnt);	//多角形の頂点の数
 
-					//++++++++++++++++++++++++++++++++++++++++
-					//星を描画
-					//++++++++++++++++++++++++++++++++++++++++
+	//++++++++++++++++++++++++++++++++++++++++
+	//星を描画
+	//++++++++++++++++++++++++++++++++++++++++
 
-					//中心を設定
+	//中心を設定
 	chusin.x = 400;
 	chusin.y = 200;
 
@@ -1637,7 +1448,7 @@ VOID MY_DRAW_POLYGON(HDC hdc)
 		rect_star,	//多角形の座標
 		kaku_cnt);	//多角形の頂点の数
 
-					//ブラシをデフォルトに戻す
+	//ブラシをデフォルトに戻す
 	SelectObject(hdc, GetStockObject(WHITE_BRUSH));
 
 	//ブラシを削除
@@ -1662,7 +1473,7 @@ VOID MY_DRAW_POLYPOLYGON(HDC hdc)
 		1,					//ペンの太さ
 		RGB(176, 224, 230));	//ペンの色
 
-								//ペンを設定
+	//ペンを設定
 	SelectObject(hdc, hpen);
 
 	//ブラシ：塗りつぶす色、模様などを設定
@@ -1672,7 +1483,7 @@ VOID MY_DRAW_POLYPOLYGON(HDC hdc)
 	hbrush = CreateSolidBrush(
 		RGB(176, 224, 230));//ブラシの色
 
-							//ブラシを設定
+	//ブラシを設定
 	SelectObject(hdc, hbrush);
 
 	//++++++++++++++++++++++++++++++++++++++++
@@ -1745,7 +1556,7 @@ VOID MY_DRAW_POLYPOLYGON(HDC hdc)
 		split,		//複数の多角形の頂点の区切り
 		2);			//多角形の総数
 
-					//ブラシをデフォルトに戻す
+	//ブラシをデフォルトに戻す
 	SelectObject(hdc, GetStockObject(WHITE_BRUSH));
 
 	//ブラシを削除
@@ -1770,7 +1581,7 @@ VOID MY_DRAW_PACMAN(HDC hdc)
 		1,					//ペンの太さ
 		RGB(0, 0, 0));		//ペンの色
 
-							//ペンを設定
+	//ペンを設定
 	SelectObject(hdc, hpen);
 
 	//ブラシ：塗りつぶす色、模様などを設定
@@ -1780,7 +1591,7 @@ VOID MY_DRAW_PACMAN(HDC hdc)
 	hbrush = CreateSolidBrush(
 		RGB(255, 255, 0));//ブラシの色
 
-						  //ブラシを設定
+	//ブラシを設定
 	SelectObject(hdc, hbrush);
 
 	//座標を90度左回転(90度右回転はπ/2)
@@ -1830,7 +1641,7 @@ VOID MY_DRAW_PACMAN(HDC hdc)
 		pt_ko_end.x,		//弧の終点のX座標
 		pt_ko_end.y);		//弧の終点のY座標
 
-							//ブラシをデフォルトに戻す
+	//ブラシをデフォルトに戻す
 	SelectObject(hdc, GetStockObject(WHITE_BRUSH));
 
 	//ブラシを削除
@@ -1855,7 +1666,7 @@ VOID MY_DRAW_PENTAGON(HDC hdc)
 		1,					//ペンの太さ
 		RGB(0, 0, 0));		//ペンの色
 
-							//ペンを設定
+	//ペンを設定
 	SelectObject(hdc, hpen);
 
 	//ブラシ：塗りつぶす色、模様などを設定
@@ -1865,7 +1676,7 @@ VOID MY_DRAW_PENTAGON(HDC hdc)
 	hbrush = CreateSolidBrush(
 		RGB(0, 128, 0));//ブラシの色
 
-						//ブラシを設定
+	//ブラシを設定
 	SelectObject(hdc, hbrush);
 
 	//++++++++++++++++++++++++++++++++++++++++
@@ -1911,7 +1722,7 @@ VOID MY_DRAW_PENTAGON(HDC hdc)
 		rect_po,	//多角形の座標
 		kaku_cnt);	//多角形の頂点の数
 
-					//ブラシをデフォルトに戻す
+	//ブラシをデフォルトに戻す
 	SelectObject(hdc, GetStockObject(WHITE_BRUSH));
 
 	//ブラシを削除
@@ -2010,11 +1821,11 @@ VOID MY_DRAW_MONBALL(HDC hdc)
 		pt_ko_end.x,		//弧の終点のX座標
 		pt_ko_end.y);		//弧の終点のY座標
 
-							//++++++++++++++++++++++++++++++++++++++++
-							//下の白い部分を描画
-							//++++++++++++++++++++++++++++++++++++++++
+	//++++++++++++++++++++++++++++++++++++++++
+	//下の白い部分を描画
+	//++++++++++++++++++++++++++++++++++++++++
 
-							//ペンを設定
+	//ペンを設定
 	SelectObject(hdc, hpen_Black_Bold);
 
 	//ブラシを設定
@@ -2043,11 +1854,11 @@ VOID MY_DRAW_MONBALL(HDC hdc)
 		pt_ko_end.x,		//弧の終点のX座標
 		pt_ko_end.y);		//弧の終点のY座標
 
-							//++++++++++++++++++++++++++++++++++++++++
-							//真ん中の丸いボタンを描画
-							//++++++++++++++++++++++++++++++++++++++++
+	//++++++++++++++++++++++++++++++++++++++++
+	//真ん中の丸いボタンを描画
+	//++++++++++++++++++++++++++++++++++++++++
 
-							//ペンを設定
+	//ペンを設定
 	SelectObject(hdc, hpen_Black_Bold);
 
 	//ブラシを設定
@@ -2145,9 +1956,9 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 		rect_c.right,	//四角の右下のX座標
 		rect_c.bottom);	//四角の右下のY座標
 
-						//+++++ビットマップを描画++++++++++++++++++++
+	//+++++ビットマップを描画++++++++++++++++++++
 
-						//ビットマップの表示位置を設定
+	//ビットマップの表示位置を設定
 	bmp_dragon.x = 100;
 	bmp_dragon.y = 100;
 
@@ -2163,9 +1974,9 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 		0,					//ビットマップをどこからコピーするか(X座標)
 		SRCCOPY);			//塗りつぶしのオプション(ラスタオペレーションコード)
 
-							//+++++ビットマップの背景を透過して描画(お手軽)++++++++++++++++++++
+	//+++++ビットマップの背景を透過して描画(お手軽)++++++++++++++++++++
 
-							//ビットマップの表示位置を設定
+	//ビットマップの表示位置を設定
 	bmp_dragon.x = 200;
 	bmp_dragon.y = 200;
 
@@ -2183,9 +1994,9 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 		bmp_dragon.width,	//ビットマップをどこまでコピーするか(X座標)
 		bmp_dragon.height,	//ビットマップをどこまでコピーするか(Y座標)
 		RGB(107, 140, 148));//GetPixel(bmp_dragon.mhdc,0,0)も可
-							//+++++ビットマップの背景を透過して描画(高速描画)++++++++++++++++++++
+	//+++++ビットマップの背景を透過して描画(高速描画)++++++++++++++++++++
 
-							//ビットマップの表示位置を設定
+	//ビットマップの表示位置を設定
 	bmp_dragon_mask.x = 300;
 	bmp_dragon_mask.y = 300;
 
@@ -2204,7 +2015,7 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 		0,							//ビットマップをどこからコピーするか(X座標)
 		SRCPAINT);					//塗りつぶしのオプション(ラスタオペレーションコード)
 
-									//背景とビットマップをORで転送→ビットマップの白い背景は無視される
+	//背景とビットマップをORで転送→ビットマップの白い背景は無視される
 	BitBlt(
 		hdc,						//描画するデバイスコンテキスト
 		bmp_dragon_white.x,			//描画開始位置X座標
@@ -2216,9 +2027,9 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 		0,							//ビットマップをどこからコピーするか(X座標)
 		SRCAND);					//塗りつぶしのオプション(ラスタオペレーションコード)
 
-									//+++++ 画像の拡大・縮小 ++++++++++++++++++++
+	//+++++ 画像の拡大・縮小 ++++++++++++++++++++
 
-									//拡大縮小率(倍)
+	//拡大縮小率(倍)
 	double rate = 2.0;
 
 	//ビットマップの表示位置を設定
@@ -2295,7 +2106,7 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 	bf.AlphaFormat = AC_SRC_ALPHA;	//ビットマップのアルファチャネルを使用
 	bf.SourceConstantAlpha = 100;	//透明にする割合(透明：0～255：不透明)
 
-									//半透明で表示
+	//半透明で表示
 	AlphaBlend(
 		hdc,						//コピー先のデバイスコンテキストのハンドル
 		bmp_dragon.x,				//コピー先の長方形の左上 X座標
@@ -2360,6 +2171,81 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 
 }
 
+//########## 動くボールを描画する関数 ##########
+VOID MY_DRAW_MOVEBALL(HDC hdc)
+{
+	//ブラシを作成
+	HBRUSH hbrush = CreateSolidBrush(RGB(255, 255, 255));
+
+	//ブラシを設定
+	SelectObject(hdc, hbrush);
+
+	//四角を描画
+	Rectangle(
+		hdc,			//デバイスコンテキストのハンドル
+		rect_c.left,	//四角の左上のX座標
+		rect_c.top,		//四角の左上のY座標
+		rect_c.right,	//四角の右下のX座標
+		rect_c.bottom);	//四角の右下のY座標
+
+	//ブラシをデフォルトに戻す
+	SelectObject(hdc, GetStockObject(WHITE_BRUSH));
+
+	//ブラシを削除
+	DeleteObject(hbrush);
+
+	//+++++ ボールを描画 ++++++++++++++++++++
+
+	//ブラシを作成
+	HBRUSH hbrush_ball = CreateSolidBrush(Ball_1.color);
+
+	//ブラシを設定
+	SelectObject(hdc, hbrush_ball);
+
+
+	////ボールの中心が、クライアント領域の右よりも小さい時
+	//if (Ball_1.chusin_x > rect_c.left && Ball_1.chusin_x < rect_c.right)
+	//{
+	//	//そのままの方向に動かす
+	//	Ball_1.chusin_x += Ball_1.speed;
+	//}
+	//else
+	//{
+	//	//反対方向に動かす
+	//	Ball_1.speed = -(Ball_1.speed);
+	//	Ball_1.chusin_x += Ball_1.speed;
+	//}
+
+	//ボールを横に動かす
+	Ball_1.chusin_x += Ball_1.speed;
+
+	if (Ball_1.chusin_x + 10 > rect_c.right)
+	{
+		//反対方向に動かす
+		Ball_1.speed = -(Ball_1.speed);
+	}
+
+	//描画領域を再計算
+	Ball_1.left = Ball_1.chusin_x - Ball_1.radius;
+	Ball_1.top = Ball_1.chusin_y - Ball_1.radius;
+	Ball_1.right = Ball_1.chusin_x + Ball_1.radius;
+	Ball_1.bottom = Ball_1.chusin_y + Ball_1.radius;
+
+	//中をすべて塗りつぶす
+	SetPolyFillMode(hdc, WINDING);
+
+	//だ円を描画
+	Ellipse(hdc, Ball_1.left, Ball_1.top, Ball_1.right, Ball_1.bottom);
+
+	//ブラシをデフォルトに戻す
+	SelectObject(hdc, GetStockObject(WHITE_BRUSH));
+
+	//ブラシを削除
+	DeleteObject(hbrush_ball);
+
+
+}
+
 //########## ウィンドウプロシージャ関数 ##########
 LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
@@ -2405,7 +2291,7 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 				0,				//高さ /そのまま使用するには0
 				LR_LOADFROMFILE | LR_CREATEDIBSECTION);	// ロードのオプション
 
-														//ビットマップ読み込みエラー
+		//ビットマップ読み込みエラー
 		if (bmp_dragon.hbmp == NULL)
 		{
 			//ビットマップが読み込めなかったとき
@@ -2419,7 +2305,7 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		bmp_dragon.width = bmp_dragon.bmp.bmWidth;		//幅を取得
 		bmp_dragon.height = bmp_dragon.bmp.bmHeight;	//高さを取得
 
-														//メモリデバイスコンテキストを作成
+		//メモリデバイスコンテキストを作成
 		bmp_dragon.mhdc = CreateCompatibleDC(NULL);
 
 		//メモリデバイスコンテキストにビットマップを設定
@@ -2437,7 +2323,7 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 				0,					//高さ /そのまま使用するには0
 				LR_LOADFROMFILE | LR_CREATEDIBSECTION);	// ロードのオプション
 
-														//ビットマップ読み込みエラー
+		//ビットマップ読み込みエラー
 		if (bmp_dragon_white.hbmp == NULL)
 		{
 			//ビットマップが読み込めなかったとき
@@ -2451,7 +2337,7 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		bmp_dragon_white.width = bmp_dragon_white.bmp.bmWidth;		//幅を取得
 		bmp_dragon_white.height = bmp_dragon_white.bmp.bmHeight;	//高さを取得
 
-																	//メモリデバイスコンテキストを作成
+		//メモリデバイスコンテキストを作成
 		bmp_dragon_white.mhdc = CreateCompatibleDC(NULL);
 
 		//メモリデバイスコンテキストにビットマップを設定
@@ -2469,7 +2355,7 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 				0,					//高さ /そのまま使用するには0
 				LR_LOADFROMFILE | LR_CREATEDIBSECTION);	// ロードのオプション
 
-														//ビットマップ読み込みエラー
+		//ビットマップ読み込みエラー
 		if (bmp_dragon_mask.hbmp == NULL)
 		{
 			//ビットマップが読み込めなかったとき
@@ -2483,86 +2369,61 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		bmp_dragon_mask.width = bmp_dragon_mask.bmp.bmWidth;		//幅を取得
 		bmp_dragon_mask.height = bmp_dragon_mask.bmp.bmHeight;	//高さを取得
 
-																//メモリデバイスコンテキストを作成
+		//メモリデバイスコンテキストを作成
 		bmp_dragon_mask.mhdc = CreateCompatibleDC(NULL);
 
 		//メモリデバイスコンテキストにビットマップを設定
 		SelectObject(bmp_dragon_mask.mhdc, bmp_dragon_mask.hbmp);
 
-		//▼▼▼▼▼ WM_CREATEの修正 ▼▼▼▼▼
-
-		//コメントアウト
-		////タイマー：ある一定の指定した時間が経過すると
-		////          メッセージキューにメッセージを送る機能
-		////          メッセージを送るということは、
-		////          マウスなどと同じ、入力装置の一つといえる
-		////分解能　：限界周期が定められている
-		////        　分解能以上の周期でメッセージを発行することはできない
-		////          Windows2000以降の、NT系の場合は10ミリ秒
-		////          1000ミリ÷10ミリ＝1秒間で100回、最大でメッセージを送れる
-
-		////タイマーを分解能(10ミリ秒)でセット(開始)
-		//SetTimer(
-		//	hwnd,		//関連付けるウィンドウハンドル
-		//	TIMER_ID_1,	//タイマーのID
-		//	10,			//タイムアウト値(ミリ秒)
-		//	NULL);		//TIMERPROC型関数へのポインタ/なし はNULL
-
-		//				//タイマーを１秒でセット(開始)
-		//SetTimer(hwnd, TIMER_ID_2, 1000, NULL);
-
-		//▲▲▲▲▲ WM_CREATEの修正 ▲▲▲▲▲
-
 		//▼▼▼▼▼ WM_CREATEの追加 ▼▼▼▼▼
-		
-		//タイマーを10ミリ間隔にセット(開始)
-		SetTimer(hwnd, TIMER_ID_FPS, 10, NULL);
+
+		//タイマー：ある一定の指定した時間が経過すると
+		//          メッセージキューにメッセージを送る機能
+		//          メッセージを送るということは、
+		//          マウスなどと同じ、入力装置の一つといえる
+		//分解能　：限界周期が定められている
+		//        　分解能以上の周期でメッセージを発行することはできない
+		//          Windows2000以降の、NT系の場合は10ミリ秒
+		//          1000ミリ÷10ミリ＝1秒間で100回、最大でメッセージを送れる
+
+		//タイマーを分解能(10ミリ秒)でセット(開始)
+		SetTimer(
+			hwnd,		//関連付けるウィンドウハンドル
+			TIMER_ID_1,	//タイマーのID
+			10,			//タイムアウト値(ミリ秒)
+			NULL);		//TIMERPROC型関数へのポインタ/なし はNULL
+
+		//タイマーを１秒でセット(開始)
+		SetTimer(hwnd, TIMER_ID_2, 1000, NULL);
 
 		//▲▲▲▲▲ WM_CREATEの追加 ▲▲▲▲▲
 
 		//ウィンドウを生成するときは、0を返す
 		return 0;
 
+		//▼▼▼▼▼ WM_CREATEの追加 ▼▼▼▼▼
+
 	case WM_TIMER:
-
-		//▼▼▼▼▼ WM_TIMERの修正 ▼▼▼▼▼
-		//コメントアウト
-		//	switch (wp)
-		//	{
-		//	case TIMER_ID_1:
-		//		timer_1_cnt++;
-		//		break;
-		//	case TIMER_ID_2:
-		//		timer_2_cnt++;
-		//		break;
-		//	}
-		//▲▲▲▲▲ WM_TIMERの修正 ▲▲▲▲▲
-
-		//▼▼▼▼▼ WM_TIMERの追加 ▼▼▼▼▼
-
 		switch (wp)
 		{
-		case TIMER_ID_FPS:
-
-			//画面更新の時刻を取得する
-			MY_FPS_UPDATE();
-
-			//無効リージョンを発生
-			//WM_PAINTを、一定時間で呼び出し
-			InvalidateRect(hwnd, NULL, FALSE);
-
-			//画面を、すぐに再描画する
-			UpdateWindow(hwnd);
-
-			//指定したFPSになるように待つ
-			MY_FPS_WAIT();
-			
+		case TIMER_ID_1:
+			timer_1_cnt++;
+			break;
+		case TIMER_ID_2:
+			timer_2_cnt++;
 			break;
 		}
-		
-		//▲▲▲▲▲ WM_TIMERの追加 ▲▲▲▲▲
+
+		//無効リージョンを発生
+		//WM_PAINTを、一定時間で呼び出し
+		InvalidateRect(hwnd, NULL, FALSE);
+
+		//画面を、すぐに再描画する
+		UpdateWindow(hwnd);
 
 		return 0;
+
+		//▲▲▲▲▲ WM_CREATEの追加 ▲▲▲▲▲
 
 	case WM_PAINT:
 		//ウィンドウ内を再描画するとき
@@ -2607,8 +2468,15 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		//モンスターボールを描画する
 		//MY_DRAW_MONBALL(hdc);
 
+		//▼▼▼▼▼ 開始 ▼▼▼▼▼
+
 		//ビットマップを描画する
-		MY_DRAW_BITMAP(hdc_double);
+		//MY_DRAW_BITMAP(hdc_double);
+
+		//動くボールを描画する関数
+		MY_DRAW_MOVEBALL(hdc_double);
+
+		//▲▲▲▲▲ 終了 ▲▲▲▲▲
 
 		//マウスの座標位置を描画する
 		MY_DRAW(hdc_double);
@@ -2643,6 +2511,20 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		//クライアント領域外でもマウスの動きの監視を開始
 		SetCapture(hwnd);
 
+		//▼▼▼▼▼ WM_LBUTTONDOWNの修正 ▼▼▼▼▼
+
+		//無効リージョンを発生
+		//InvalidateRect(
+		//	hwnd,	//無効リージョンを発生させるウィンドウハンドル
+		//	NULL,	//無効化する領域：NULLならクライアント領域全体
+		//	FALSE);	//TRUE：背景を消去/FALSE：背景をそのまま残す
+
+		//画面を、すぐに再描画する
+		//WM_PAINTを直接ウィンドウプロシージャに送る関数
+		//UpdateWindow(hwnd);
+
+		//▲▲▲▲▲ WM_LBUTTONDOWNの修正 ▲▲▲▲▲
+
 		break;
 
 	case WM_LBUTTONUP:
@@ -2656,6 +2538,16 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
 		//クライアント領域外でもマウスの動きの監視を終了
 		ReleaseCapture();
+
+		//▼▼▼▼▼ WM_LBUTTONUPの修正 ▼▼▼▼▼
+
+		//無効リージョンを発生
+		//InvalidateRect(hwnd, NULL, FALSE);
+
+		//画面を、すぐに再描画する
+		//UpdateWindow(hwnd);
+
+		//▲▲▲▲▲ WM_LBUTTONUPの修正 ▲▲▲▲▲
 
 		break;
 
@@ -2707,6 +2599,19 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
 		if (pt_Mouse.y >= window_Size.bottom)
 			pt_Mouse.y = window_Size.bottom - 1;
+
+		//▼▼▼▼▼ WM_MOUSEMOVEの修正 ▼▼▼▼▼
+
+		//無効リージョンを発生
+		//OS(Windows)が、WM_PAINTを直接ウィンドウプロシージャに送る
+		//無効リージョン(領域)は再描画される
+		//InvalidateRect(hwnd, NULL, FALSE);
+
+		//画面を、すぐに再描画する
+		//WM_PAINTを直接ウィンドウプロシージャに送る関数
+		//UpdateWindow(hwnd);
+
+		//▲▲▲▲▲ WM_MOUSEMOVEの修正 ▲▲▲▲▲
 
 		break;
 	case WM_SIZE:
@@ -2790,23 +2695,15 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		//メモリデバイスコンテキストを破棄
 		DeleteDC(hdc_double);
 
-		//▼▼▼▼▼ WM_DESTROYの修正 ▼▼▼▼▼
+		//▼▼▼▼▼ WM_DESTROYに追加 ▼▼▼▼▼
 
-		//コメントアウト
-		////タイマー１を削除(終了)
-		//KillTimer(hwnd, TIMER_ID_2);
+		//タイマー１を削除(終了)
+		KillTimer(hwnd, TIMER_ID_2);
 
-		////タイマー２を削除(終了)
-		//KillTimer(hwnd, TIMER_ID_1);
+		//タイマー２を削除(終了)
+		KillTimer(hwnd, TIMER_ID_1);
 
-		//▲▲▲▲▲ WM_DESTROYの修正 ▲▲▲▲▲
-
-		//▼▼▼▼▼ WM_DESTROYの追加 ▼▼▼▼▼
-
-		//FPSタイマーを削除(終了)
-		KillTimer(hwnd, TIMER_ID_FPS);
-
-		//▲▲▲▲▲ WM_DESTROYの追加 ▲▲▲▲▲
+		//▲▲▲▲▲ WM_DESTROYに追加 ▲▲▲▲▲
 
 		//メッセージキューに WM_QUIT を送る
 		PostQuitMessage(0);

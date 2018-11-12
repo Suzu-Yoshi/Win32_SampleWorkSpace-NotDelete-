@@ -87,10 +87,10 @@
     <ClCompile Include="sample022.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="sample023.cpp">
+    <ClCompile Include="sample022_fps.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="sample022_fps.cpp">
+    <ClCompile Include="sample023.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
