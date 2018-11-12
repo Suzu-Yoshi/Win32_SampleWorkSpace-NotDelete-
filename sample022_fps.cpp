@@ -58,6 +58,8 @@
 	DWORD		fps_end_tm;	//設定したフレームの終了時刻
 	DWORD		fps_count;	//フレームのカウント
 
+	
+	
 ◎WinMain関数の修正
 	・コメントアウト解除
 	//メッセージを受け取り続ける
@@ -174,6 +176,14 @@
 
 	TextOut(hdc, 100, tm.tmHeight * 2, Str_fps_W, lstrlen(Str_fps_W));
 
+	
+	
+	
+	
+	
+	
+	
+	
 ◎WM_CREATEの修正
 
 	・コメントアウト
@@ -243,6 +253,42 @@
 	KillTimer(hwnd, TIMER_ID_FPS);
 
 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
