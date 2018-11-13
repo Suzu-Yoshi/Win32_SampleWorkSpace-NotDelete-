@@ -5,252 +5,106 @@
 /*プログラムが入力できたら、関数調べや、プログラムの改造をしてみよう    */
 
 /*
-◎ヘッダーファイル読み込みに追加
-	・先頭に追加
-
-	#include <stdio.h>
-	#include <locale.h>
-
-◎マクロ定義の修正
-	・コメントアウト
-
-	//#define TIMER_ID_1	1		//タイマー１
-	//#define TIMER_ID_2	2		//タイマー２
 
 ◎マクロ定義に追加
-	・#define TIMER_ID_2	2 の下に追加する
+	・#define AVE_FPS 60 の下に追加
 
-	#define TIMER_ID_FPS	100	//FPSタイマー
+	#define MY_KEY_DOWN			1	//キーを押したとき
+	#define MY_KEY_UP			0	//キーを上げたとき
 
-	#define DISP_FPS		60	//画面のFPS
-	#define AVE_FPS			60	//平均を取るサンプル数
+	#define MY_KEY_ARROW_UP		0	//上矢印キー
+	#define MY_KEY_ARROW_RIGHT	1	//右矢印キー
+	#define MY_KEY_ARROW_DOWN	2	//下矢印キー
+	#define MY_KEY_ARROW_LEFT	3	//左矢印キー
 
-◎プロトタイプ宣言に追加
-	・VOID MY_DRAW_BITMAP(HDC); の下に追加する
 
-	//画面更新の時刻を取得する関数
-	BOOL MY_FPS_UPDATE(VOID);
 
-	//指定したFPSになるように待つ関数
-	VOID MY_FPS_WAIT(VOID);
+◎プロトタイプ宣言を追加
+	・VOID MY_FPS_WAIT(VOID); の下に追加
 
-◎グローバル変数の修正
-	・コメントアウト
+	//仮想キーコードを整形する関数
+	VOID MY_FORMAT_KEYCODE(WPARAM,int);
 
-	////unsigen：符号なし
-	////メインループでカウントをする変数
-	//unsigned int mainLoop_cnt = 0;
-	//
-	////タイマー１でカウントする変数
-	//unsigned int timer_1_cnt = 0;
-	//
-	////タイマー２でカウントする変数
-	//unsigned int timer_2_cnt = 0;
+	//仮想キーコードを文字に整形する関数
+	VOID MY_FORMAT_KEYCHAR(WPARAM, int);
+
+	//矢印キーを押しているか判定
+	VOID MY_CHK_KEY_ARROW(VOID);
+
+	//ビットマップを移動させる関数
+	VOID MY_MOVE_BITMAP(MY_BMP *);
 
 ◎グローバル変数に追加
-	・unsigned int timer_2_cnt = 0; の下に追加する
+	・DWORD		fps_count; の下に追加
 
-	//FPSのタイマーでカウントする変数
-	unsigned int timer_fps_cnt = 0;
+	//キーコードを入れる変数
+	TCHAR Str_KeyCode[64] = TEXT("キーコード：--");
 
-	float		fps;		//FPS
-	DWORD		fps_sta_tm;	//0フレーム目の開始時刻
-	DWORD		fps_end_tm;	//設定したフレームの終了時刻
-	DWORD		fps_count;	//フレームのカウント
+	//キー文字を入れる変数
+	TCHAR Str_KeyValue[64] = TEXT("キー文字：--");
 
+	//キーボードの状態を入れる変数
+	TCHAR Str_KeyState[64] = TEXT("キーの状態:--");
 
+	//矢印キーの状態を入れる配列
+	int ArrowKey[4] = { 0,0,0,0 };
 
-◎WinMain関数の修正
-	・コメントアウト解除
-	//メッセージを受け取り続ける
+◎WinMainのWhile文の中に追加する
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
-	DispatchMessage(&msg);
+		//▼▼▼▼▼ WinMainに追加する ▼▼▼▼▼
+		
+		//仮想キーコードを文字に変換する
+		TranslateMessage(&msg);
+		
+		//▲▲▲▲▲ WinMainに追加する ▲▲▲▲▲
+		DispatchMessage(&msg);
 	}
 
-	・コメントアウト
-	//メッセージを受け取り続ける
-	while (GetMessage(&msg, NULL, 0, 0))
-	{
-	DispatchMessage(&msg);
-	}
-	の【下 の while文】をコメントアウト※プログラム参考例を要参照
+◎MY_SetClientSizeの修正
+
+	//サイズを同じにする
+	rect_c.bottom = WIN_HEIGHT;
+	rect_c.right = WIN_WIDTH;
+
+◎MY_DRAWの修正
+	・TextOut(hdc, 100, tm.tmHeight * 2, Str_fps_W, lstrlen(Str_fps_W)); の下に追加
+
+	//仮想キーコードを描画
+	TextOut(hdc, 100, tm.tmHeight * 3, Str_KeyCode, lstrlen(Str_KeyCode));
+
+	//仮想キー状態を文字にして描画
+	TextOut(hdc, 100, tm.tmHeight * 4, Str_KeyState, lstrlen(Str_KeyState));
+
+	//仮想キーコードを文字にして描画
+	TextOut(hdc, 100, tm.tmHeight * 5, Str_KeyValue, lstrlen(Str_KeyValue));
+
+◎MY_DRAW_BITMAPに追加
+	・Rectangle(…); の下に追加する
+
+	//背景色を指定して描画
+	TransparentBlt(
+		hdc,				//描画するデバイスコンテキスト
+		bmp_dragon.x,		//描画開始位置X座標
+		bmp_dragon.y,		//描画開始位置Y座標
+		bmp_dragon.width,	//描画する幅
+		bmp_dragon.height,	//描画する高さ
+		bmp_dragon.mhdc,	//ビットマップのデバイスコンテキスト
+		0,					//ビットマップをどこからコピーするか(X座標)
+		0,					//ビットマップをどこからコピーするか(Y座標)
+		bmp_dragon.width,	//ビットマップをどこまでコピーするか(X座標)
+		bmp_dragon.height,	//ビットマップをどこまでコピーするか(Y座標)
+		GetPixel(bmp_dragon.mhdc, 0, 0));//透過色を指定
 
 
-◎関数の追加
-	・WinMain関数の下の任意の場所に追加
-	//########## 画面更新の時刻を取得する関数 ##########
-	BOOL MY_FPS_UPDATE(VOID)
-	{
-		//1フレーム目なら時刻を記憶
-		if (fps_count == 0)
-		{
-			//GetTickCount：
-			//Windowsが起動してから現在までの時刻を
-			//ミリ秒で取得
-			fps_sta_tm = GetTickCount();
-		}
-
-		//60フレーム目なら平均を計算する
-		if (fps_count == AVE_FPS)
-		{
-			//現在の時刻をミリ秒で取得
-			fps_end_tm = GetTickCount();
-
-			//.0f→float型で計算
-			//平均的なFPS値を計算
-			fps = 1000.0f / ((fps_end_tm - fps_sta_tm) / (float)AVE_FPS);
-
-			fps_sta_tm = fps_end_tm;
-			fps_count = 0;
-		}
-
-		fps_count++;
-
-		return true;
-	}
-
-	//########## 指定したFPSになるように待つ関数 ##########
-	VOID MY_FPS_WAIT(VOID)
-	{
-		//現在の時刻をミリ秒で取得
-		DWORD now_tm = GetTickCount();
-
-		//1フレーム目から実際にかかった時間を計算
-		DWORD keika_tm = now_tm - fps_sta_tm;
-
-		//待つべき時間 = かかるべき時間 - 実際にかかった時間;
-		DWORD wait_tm = (fps_count * 1000 / DISP_FPS) - (keika_tm);
-
-		//待つべき時間があった場合
-		if (wait_tm > 0 && wait_tm < 2000)
-		{
-			//ミリ秒分、処理を中断する
-			Sleep(wait_tm);
-		}
-	}
-
-◎MY_DRAWを修正
-	・コメントアウト
-	////+++++ メインループでカウント ++++++++++++++++++++
-	//TCHAR Str_mainLoop_Cnt[64];
-	//wsprintf(Str_mainLoop_Cnt, TEXT("メインループのカウント：%06d"), mainLoop_cnt);
-	//TextOut(hdc, 100, tm.tmHeight * 2, Str_mainLoop_Cnt, lstrlen(Str_mainLoop_Cnt));
-
-	////+++++ タイマー１でカウント ++++++++++++++++++++
-	//TCHAR Str_Timer_1_Cnt[64];
-	//wsprintf(Str_Timer_1_Cnt, TEXT("タイマー１のカウント：%06d"), timer_1_cnt);
-	//TextOut(hdc, 100, tm.tmHeight * 3, Str_Timer_1_Cnt, lstrlen(Str_Timer_1_Cnt));
-
-	////+++++ タイマー２でカウント ++++++++++++++++++++
-	//TCHAR Str_Timer_2_Cnt[64];
-	//wsprintf(Str_Timer_2_Cnt, TEXT("タイマー２のカウント：%06d"), timer_2_cnt);
-	//TextOut(hdc, 100, tm.tmHeight * 4, Str_Timer_2_Cnt, lstrlen(Str_Timer_2_Cnt));
-
-◎MY_DRAWに追加
-	・タイマー２でカウントの TextOut() の下に追加
-	//+++++ FPSを表示 ++++++++++++++++++++
-
-	//FPS値を整形するための変数
-	CHAR Str_fps_C[64];
-	size_t wLen = 0;
-	errno_t err = 0;
-
-	//FPS値を整形
-	sprintf(Str_fps_C, "FPS：%03.1lf", fps);
-
-	//FPS値を表示するための変数
-	TCHAR Str_fps_W[64];
-
-	//ロケール指定
-	setlocale(LC_ALL, "japanese");
-
-	//文字列をマルチバイト文字からワイド文字に変換
-	err = mbstowcs_s(
-		&wLen,				//変換された文字数
-		Str_fps_W,			//変換されたワイド文字
-		strlen(Str_fps_C),	//変換する文字数
-		Str_fps_C,			//変換するマルチバイト文字
-		_TRUNCATE			//バッファに収まるだけの文字列まで変換
-	);
-
-	TextOut(hdc, 100, tm.tmHeight * 2, Str_fps_W, lstrlen(Str_fps_W));
-
-
-
-
-
-
-
-
-
-◎WM_CREATEの修正
-
-	・コメントアウト
-	////タイマーを分解能(10ミリ秒)でセット(開始)
-	//SetTimer(
-	//	hwnd,		//関連付けるウィンドウハンドル
-	//	TIMER_ID_1,	//タイマーのID
-	//	10,			//タイムアウト値(ミリ秒)
-	//	NULL);		//TIMERPROC型関数へのポインタ/なし はNULL
-
-	//				//タイマーを１秒でセット(開始)
-	//SetTimer(hwnd, TIMER_ID_2, 1000, NULL);
-
-◎WM_CREATEの追加
-
-	・SetTimer(hwnd, TIMER_ID_2, 1000, NULL); の下に追加
-	//タイマーを10ミリ間隔にセット(開始)
-	SetTimer(hwnd, TIMER_ID_FPS, 10, NULL);
-
-◎WM_TIMERの修正
-	・コメントアウト
-	//	switch (wp)
-	//	{
-	//	case TIMER_ID_1:
-	//		timer_1_cnt++;
-	//		break;
-	//	case TIMER_ID_2:
-	//		timer_2_cnt++;
-	//		break;
-	//	}
-
-◎WM_TIMERの追加
-	・switch (wp)文 の下に追加
-	switch (wp)
-	{
-		case TIMER_ID_FPS:
-
-		//画面更新の時刻を取得する
-		MY_FPS_UPDATE();
-
-		//無効リージョンを発生
-		//WM_PAINTを、一定時間で呼び出し
-		InvalidateRect(hwnd, NULL, FALSE);
-
-		//画面を、すぐに再描画する
-		UpdateWindow(hwnd);
-
-		//指定したFPSになるように待つ
-		MY_FPS_WAIT();
-
-		break;
-	}
-
-◎WM_DESTROYの修正
+◎MY_DRAW_BITMAPを修正
 	・コメントアウト
 
-	////タイマー１を削除(終了)
-	//KillTimer(hwnd, TIMER_ID_2);
+	  //+++++ ビットマップを描画 +++++ から
+	  SelectObject(hdc, GetStockObject(WHITE_BRUSH));までを
+	  コメントアウトする【プログラム参考例を要参照】
 
-	////タイマー２を削除(終了)
-	//KillTimer(hwnd, TIMER_ID_1);
-
-◎WM_DESTROYの追加
-	・KillTimer(hwnd, TIMER_ID_1); の下に追加
-
-	//FPSタイマーを削除(終了)
-	KillTimer(hwnd, TIMER_ID_FPS);
+	
 
 */
 
@@ -944,7 +798,6 @@ VOID MY_DRAW(HDC hdc)
 	//TCHAR Str_Timer_2_Cnt[64];
 	//wsprintf(Str_Timer_2_Cnt, TEXT("タイマー２のカウント：%06d"), timer_2_cnt);
 	//TextOut(hdc, 100, tm.tmHeight * 4, Str_Timer_2_Cnt, lstrlen(Str_Timer_2_Cnt));
-	//▲▲▲▲▲ MY_DRAWを修正 ▲▲▲▲▲
 
 	//+++++ FPSを表示 ++++++++++++++++++++
 
@@ -2966,6 +2819,11 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
 	case WM_KEYDOWN:
 		//キーボードでキーを押したとき
+
+		//コメントアウト
+		//TCHAR Str_KeyValue[128];
+		//wsprintf(Str_KeyValue, TEXT("キーコード：%0X"),wp);
+		//MessageBox(hwnd, Str_KeyValue, TEXT("KeyDown"), MB_OK);
 
 		//仮想キーコードを整形する
 		MY_FORMAT_KEYCODE(wp, msg);

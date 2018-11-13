@@ -2592,5 +2592,4 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 	//デフォルトのウィンドウプロシージャ関数を呼び出す
 	return DefWindowProc(hwnd, msg, wp, lp);
 }
-
 */
