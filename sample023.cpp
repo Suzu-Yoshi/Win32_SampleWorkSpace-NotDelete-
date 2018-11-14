@@ -2,10 +2,11 @@
 /*記入例は右の場所を参考→学生共有サーバ\担当\41.G1_Win32API			*/
 /*Ctrl + M の後、Ctrl + L で、プログラム全体の折りたたみ/解除ができます */
 /*Ctrl + M の後、Ctrl + M で、ブロックの折りたたみ/解除ができます		*/
-/*プログラムが入力できたら、関数調べや、プログラムの改造をしてみよう    */
+/*◎プログラムが入力できたら、関数調べや、プログラムの改造をしてみよう	*/
+/*・ヒント：移動スピード      ：MY_SPEED_NORMAL と MY_SPEED_METEOR		*/
+/*・ヒント：ウィンドウの大きさ：WIN_WIDTH と WIN_HEIGHT					*/
 
 /*
-
 ◎マクロ定義に追加
 	・#define AVE_FPS 60 の下に追加
 
@@ -17,7 +18,8 @@
 	#define MY_KEY_ARROW_DOWN	2	//下矢印キー
 	#define MY_KEY_ARROW_LEFT	3	//左矢印キー
 
-
+	#define MY_SPEED_NORMAL		1	//普通のスピード
+	#define MY_SPEED_METEOR		8	//速いスピード(METEOR:メテオ:隕石)
 
 ◎プロトタイプ宣言を追加
 	・VOID MY_FPS_WAIT(VOID); の下に追加
@@ -28,8 +30,8 @@
 	//仮想キーコードを文字に整形する関数
 	VOID MY_FORMAT_KEYCHAR(WPARAM, int);
 
-	//矢印キーを押しているか判定
-	VOID MY_CHK_KEY_ARROW(VOID);
+	//どのキーを押しているか判定
+	VOID MY_CHECK_KEYDOWN(VOID);
 
 	//ビットマップを移動させる関数
 	VOID MY_MOVE_BITMAP(MY_BMP *);
@@ -47,7 +49,17 @@
 	TCHAR Str_KeyState[64] = TEXT("キーの状態:--");
 
 	//矢印キーの状態を入れる配列
-	int ArrowKey[4] = { 0,0,0,0 };
+	int ArrowKey[4] = {
+		MY_KEY_UP,
+		MY_KEY_UP,
+		MY_KEY_UP,
+		MY_KEY_UP };
+
+	//シフトキーの状態を入れる変数
+	int ShiftKey = MY_KEY_UP;
+
+	//移動速度を保存する変数
+	int Speed = MY_SPEED_NORMAL;
 
 ◎WinMainのWhile文の中に追加する
 	while (GetMessage(&msg, NULL, 0, 0))
@@ -61,7 +73,7 @@
 		DispatchMessage(&msg);
 	}
 
-◎MY_SetClientSizeの修正
+◎MY_SetClientSizeの修正【忘れずに修正してください】
 
 	//サイズを同じにする
 	rect_c.bottom = WIN_HEIGHT;
@@ -104,7 +116,289 @@
 	  SelectObject(hdc, GetStockObject(WHITE_BRUSH));までを
 	  コメントアウトする【プログラム参考例を要参照】
 
+
+	  
+	  
+	  
+	  
+	  
+◎関数を追加
+
+	//########## どのキーを押しているか判定する関数 ##########
+	VOID MY_CHECK_KEYDOWN(VOID)
+	{
+		//上矢印キーが押されているか判定する
+		if (GetKeyState(VK_UP) < 0)
+		{
+			ArrowKey[MY_KEY_ARROW_UP] = MY_KEY_DOWN;
+		}
+		else
+		{
+			ArrowKey[MY_KEY_ARROW_UP] = MY_KEY_UP;
+		}
+
+		//右矢印キーが押されているか判定する
+		if (GetKeyState(VK_RIGHT) < 0)
+		{
+			ArrowKey[MY_KEY_ARROW_RIGHT] = MY_KEY_DOWN;
+		}
+		else
+		{
+			ArrowKey[MY_KEY_ARROW_RIGHT] = MY_KEY_UP;
+		}
+
+		//下矢印キーが押されているか判定する
+		if (GetKeyState(VK_DOWN) < 0)
+		{
+			ArrowKey[MY_KEY_ARROW_DOWN] = MY_KEY_DOWN;
+		}
+		else
+		{
+			ArrowKey[MY_KEY_ARROW_DOWN] = MY_KEY_UP;
+		}
+
+		//左矢印キーが押されているか判定する
+		if (GetKeyState(VK_LEFT) < 0)
+		{
+			ArrowKey[MY_KEY_ARROW_LEFT] = MY_KEY_DOWN;
+		}
+		else
+		{
+			ArrowKey[MY_KEY_ARROW_LEFT] = MY_KEY_UP;
+		}
+
+		//シフトキーが押されているか判定する
+		if (GetKeyState(VK_SHIFT) < 0)
+		{
+			ShiftKey = MY_KEY_DOWN;
+		}
+		else
+		{
+			ShiftKey = MY_KEY_UP;
+		}
+	}
+
 	
+	
+	
+	
+	
+	
+	//########## ビットマップを移動させる関数 ##########
+	VOID MY_MOVE_BITMAP(MY_BMP *bmp)
+	{
+		//シフトキーが押されているときは早く動ける
+		if (ShiftKey == MY_KEY_DOWN)
+		{
+			Speed = MY_SPEED_METEOR;
+		}
+		else
+		{
+			Speed = MY_SPEED_NORMAL;
+		}
+
+		//上矢印キーが押されていれば上に動かす
+		if (ArrowKey[MY_KEY_ARROW_UP] == MY_KEY_DOWN)
+		{
+			bmp->y -= Speed;
+		}
+
+		//右矢印キーが押されていれば右に動かす
+		if (ArrowKey[MY_KEY_ARROW_RIGHT] == MY_KEY_DOWN)
+		{
+			bmp->x += Speed;
+		}
+
+		//下矢印キーが押されていれば下に動かす
+		if (ArrowKey[MY_KEY_ARROW_DOWN] == MY_KEY_DOWN)
+		{
+			bmp->y += Speed;
+		}
+	
+		//左矢印キーが押されていれば左に動かす
+		if (ArrowKey[MY_KEY_ARROW_LEFT] == MY_KEY_DOWN)
+		{
+			bmp->x -= Speed;
+		}
+	}
+
+	//########## キーボードの仮想コードを整形する関数 ##########
+	VOID MY_FORMAT_KEYCODE(WPARAM wp,int message)
+	{
+		//シフトキーを押しているか判断
+		if (GetKeyState(VK_SHIFT) < 0)	//キーが押されているとき
+		{
+			//キーコードを文字列として整形
+			wsprintf(Str_KeyState, TEXT("キー状態：Shift：%0X"), wp);
+		}
+		//Ctrlキーを押しているか判断
+		else if(GetKeyState(VK_CONTROL) < 0)	//キーが押されているとき
+		{
+			//キーコードを文字列として整形
+			wsprintf(Str_KeyState, TEXT("キー状態：Ctrl：%0X"), wp);
+		}
+		//押していないとき
+		else
+		{
+			//キーコードを文字列として整形
+			wsprintf(Str_KeyState, TEXT("キー状態：--"), wp);
+		}
+
+		
+		
+		switch (message)
+		{
+			case WM_KEYDOWN:
+				//キーを押したとき
+
+				//キーコードを文字列として整形
+				wsprintf(Str_KeyCode, TEXT("キーコード：%0X"), wp);
+
+				break;
+
+			case WM_KEYUP:
+				//キーを上げたとき
+
+				//キーコードを文字列として整形
+				wsprintf(Str_KeyCode, TEXT("キーコード：--"));
+
+				break;
+
+			case WM_SYSKEYDOWN:
+				//システムキーを押したとき
+
+				//Altキーを押したとき
+				if (wp == VK_MENU)
+				{
+					//キーコードを文字列として整形
+					wsprintf(Str_KeyCode, TEXT("システムキーコード：Alt：%0X"), wp);
+				}
+
+				break;
+
+			case WM_SYSKEYUP:
+				//システムキーを上げたとき
+
+				//キーコードを文字列として整形
+				wsprintf(Str_KeyCode, TEXT("システムキーコード：--"));
+
+				break;
+		}
+	}
+
+	//########## 仮想キーコードを文字に整形する関数 ##########
+	VOID MY_FORMAT_KEYCHAR(WPARAM wp, int message)
+	{
+
+		switch (message)
+		{
+		case WM_CHAR:
+			//キーコードを文字に変換したとき
+
+			//キー文字を文字列として整形
+			wsprintf(Str_KeyValue, TEXT("キー文字：%s"), (PTSTR)&wp);
+
+			break;
+
+		case WM_KEYUP:
+			//キーを上げたとき
+
+			//キー文字を文字列として整形
+			wsprintf(Str_KeyValue, TEXT("キー文字：--"));
+
+			break;
+
+		case WM_SYSCHAR:
+			//キーコードを文字に変換したとき
+
+			//キー文字を文字列として整形
+			wsprintf(Str_KeyValue, TEXT("システムキー文字：%s"), (PTSTR)&wp);
+
+			break;
+
+		case WM_SYSKEYUP:
+			//システムキーを上げたとき
+
+			//キー文字を文字列として整形
+			wsprintf(Str_KeyValue, TEXT("システムキー文字：--"));
+
+			break;
+		}
+	}
+
+◎WM_TIMERに追加
+	・MY_FPS_UPDATE(); の下に追加する
+
+	//矢印キーを押しているか判定する
+	MY_CHK_KEY_ARROW();
+
+	//ビットマップを移動させる
+	MY_MOVE_BITMAP(&bmp_dragon);
+
+◎メッセージを追加
+	・同じメッセージ(WM_KEYDOWNなど)があれば、その箇所の修正を行う
+
+	case WM_KEYDOWN:
+		//キーボードでキーを押したとき
+
+		//コメントアウト
+		//TCHAR Str_KeyValue[128];
+		//wsprintf(Str_KeyValue, TEXT("キーコード：%0X"),wp);
+		//MessageBox(hwnd, Str_KeyValue, TEXT("KeyDown"), MB_OK);
+
+		//仮想キーコードを整形する
+		MY_FORMAT_KEYCODE(wp, msg);
+
+		return 0;
+
+	case WM_KEYUP:
+		//キーボードでキーを押したとき
+
+		//仮想キーコードを整形する
+		MY_FORMAT_KEYCODE(wp, msg);
+
+		//仮想キーコードを文字として整形する
+		MY_FORMAT_KEYCHAR(wp, msg);
+
+		return 0;
+
+	case WM_CHAR:
+		//仮想キーコードを文字に変換したとき
+		//WM_KEYDOWNのあとに、このメッセージが発行される
+
+		//仮想キーコードを文字として整形する
+		MY_FORMAT_KEYCHAR(wp, msg);
+
+		return 0;
+
+	case WM_SYSKEYDOWN:
+		//システム側のキー(Altキー)を押したとき
+
+		//仮想キーコードを整形する
+		MY_FORMAT_KEYCODE(wp, msg);
+
+		return 0;
+
+	case WM_SYSKEYUP:
+		//システム側のキー(Altキー)を上げたとき
+
+		//仮想キーコードを整形する
+		MY_FORMAT_KEYCODE(wp, msg);
+
+		//仮想キーコードを文字として整形する
+		MY_FORMAT_KEYCHAR(wp, msg);
+
+		return 0;
+
+	case  WM_SYSCHAR:
+
+		//仮想システムキーコードを文字に変換したとき
+		//WM_SYSKEYDOWNのあとに、このメッセージが発行される
+
+		//仮想キーコードを文字として整形する
+		MY_FORMAT_KEYCHAR(wp, msg);
+
+		return 0;
 
 */
 
@@ -253,6 +547,11 @@
 #define MY_KEY_ARROW_DOWN	2	//下矢印キー
 #define MY_KEY_ARROW_LEFT	3	//左矢印キー
 
+#define MY_KEY_SHIFT		0	//シフトキー
+
+#define MY_SPEED_NORMAL		1	//普通のスピード
+#define MY_SPEED_METEOR		8	//速いスピード(METEOR:メテオ:隕石)
+
 //▲▲▲▲▲ マクロ定義に追加 ▲▲▲▲▲
 
 //########## 列挙型 ##########
@@ -347,8 +646,8 @@ VOID MY_FORMAT_KEYCODE(WPARAM,int);
 //仮想キーコードを文字に整形する関数
 VOID MY_FORMAT_KEYCHAR(WPARAM, int);
 
-//矢印キーを押しているか判定
-VOID MY_CHK_KEY_ARROW(VOID);
+//どのキーを押しているか判定
+VOID MY_CHECK_KEYDOWN(VOID);
 
 //ビットマップを移動させる関数
 VOID MY_MOVE_BITMAP(MY_BMP *);
@@ -410,7 +709,17 @@ TCHAR Str_KeyValue[64] = TEXT("キー文字：--");
 TCHAR Str_KeyState[64] = TEXT("キーの状態:--");
 
 //矢印キーの状態を入れる配列
-int ArrowKey[4] = { 0,0,0,0 };
+int ArrowKey[4] = { 
+	MY_KEY_UP,
+	MY_KEY_UP,
+	MY_KEY_UP,
+	MY_KEY_UP };
+
+//シフトキーの状態を入れる変数
+int ShiftKey = MY_KEY_UP;
+
+//移動速度を保存する変数
+int Speed = MY_SPEED_NORMAL;
 
 //▲▲▲▲▲ グローバル変数に追加 ▲▲▲▲▲
 
@@ -2266,8 +2575,8 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 
 //▼▼▼▼▼ 関数を追加 ▼▼▼▼▼
 
-//########## 矢印キーを押しているか判定する関数 ##########
-VOID MY_CHK_KEY_ARROW(VOID)
+//########## どのキーを押しているか判定する関数 ##########
+VOID MY_CHECK_KEYDOWN(VOID)
 {
 	//上矢印キーが押されているか判定する
 	if (GetKeyState(VK_UP) < 0)
@@ -2308,39 +2617,61 @@ VOID MY_CHK_KEY_ARROW(VOID)
 	{
 		ArrowKey[MY_KEY_ARROW_LEFT] = MY_KEY_UP;
 	}
+
+	//シフトキーが押されているか判定する
+	if (GetKeyState(VK_SHIFT) < 0)
+	{
+		ShiftKey = MY_KEY_DOWN;
+	}
+	else
+	{
+		ShiftKey = MY_KEY_UP;
+	}
+
 }
 
 //########## ビットマップを移動させる関数 ##########
 VOID MY_MOVE_BITMAP(MY_BMP *bmp)
 {
-	float speed = 2;
+	
+	//シフトキーが押されているときは早く動ける
+	if (ShiftKey == MY_KEY_DOWN)
+	{
+		Speed = MY_SPEED_METEOR;
+	}
+	else
+	{
+		Speed = MY_SPEED_NORMAL;
+	}
 
 	//上矢印キーが押されていれば上に動かす
 	if (ArrowKey[MY_KEY_ARROW_UP] == MY_KEY_DOWN)
 	{
-		bmp->y -= speed;
+		bmp->y -= Speed;
 	}
 
 	//右矢印キーが押されていれば右に動かす
 	if (ArrowKey[MY_KEY_ARROW_RIGHT] == MY_KEY_DOWN)
 	{
-		bmp->x += speed;
+		bmp->x += Speed;
 	}
 
 	//下矢印キーが押されていれば下に動かす
 	if (ArrowKey[MY_KEY_ARROW_DOWN] == MY_KEY_DOWN)
 	{
-		bmp->y += speed;
+		bmp->y += Speed;
 	}
 	
 	//左矢印キーが押されていれば左に動かす
 	if (ArrowKey[MY_KEY_ARROW_LEFT] == MY_KEY_DOWN)
 	{
-		bmp->x -= speed;
+		bmp->x -= Speed;
 	}
+
+	
 }
 
-//########## キーボードの仮想コードを整形する関数 ##########
+//########## キーボードの仮想キーコードを整形する関数 ##########
 VOID MY_FORMAT_KEYCODE(WPARAM wp,int message)
 {
 	//シフトキーを押しているか判断
@@ -2402,7 +2733,7 @@ VOID MY_FORMAT_KEYCODE(WPARAM wp,int message)
 	}
 }
 
-//########## キーボードの文字を整形関数 ##########
+//########## 仮想キーコードを文字に整形する関数 ##########
 VOID MY_FORMAT_KEYCHAR(WPARAM wp, int message)
 {
 	
@@ -2612,7 +2943,7 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 			//▼▼▼▼▼ WM_TIMERに追加 ▼▼▼▼▼
 
 			//矢印キーを押しているか判定する
-			MY_CHK_KEY_ARROW();
+			MY_CHECK_KEYDOWN();
 
 			//ビットマップを移動させる
 			MY_MOVE_BITMAP(&bmp_dragon);
