@@ -2578,8 +2578,22 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 //########## どのキーを押しているか判定する関数 ##########
 VOID MY_CHECK_KEYDOWN(VOID)
 {
+	//★★★修正箇所★★★
+
+	//GetKeyState		：キーが押されているか判定
+	//GetAsyncKeyState	：キーが押されている＆前回の情報を取得
+	//					：戻り値の最上位ビットが1(& 0x8000)なら、押されている
+	//					：戻り値の最下位ビットが1(& 0x0001)なら、前回から押されている
+	//					：戻り値　　　　　　　が0		   なら、押されていない					
+	
+	SHORT IskeyDown_Up		= GetAsyncKeyState(VK_UP) & 0x8000;
+	SHORT IskeyDown_Right	= GetAsyncKeyState(VK_RIGHT) & 0x8000;
+	SHORT IskeyDown_Down	= GetAsyncKeyState(VK_DOWN) & 0x8000;
+	SHORT IskeyDown_Left	= GetAsyncKeyState(VK_LEFT)	& 0x8000;
+	SHORT IsKeyDown_Shift	= GetAsyncKeyState(VK_SHIFT) & 0x8000;
+
 	//上矢印キーが押されているか判定する
-	if (GetKeyState(VK_UP) < 0)
+	if (IskeyDown_Up != 0)
 	{
 		ArrowKey[MY_KEY_ARROW_UP] = MY_KEY_DOWN;
 	}
@@ -2589,7 +2603,7 @@ VOID MY_CHECK_KEYDOWN(VOID)
 	}
 
 	//右矢印キーが押されているか判定する
-	if (GetKeyState(VK_RIGHT) < 0)
+	if (IskeyDown_Right != 0)
 	{
 		ArrowKey[MY_KEY_ARROW_RIGHT] = MY_KEY_DOWN;
 	}
@@ -2599,7 +2613,7 @@ VOID MY_CHECK_KEYDOWN(VOID)
 	}
 
 	//下矢印キーが押されているか判定する
-	if (GetKeyState(VK_DOWN) < 0)
+	if (IskeyDown_Down != 0)
 	{
 		ArrowKey[MY_KEY_ARROW_DOWN] = MY_KEY_DOWN;
 	}
@@ -2609,7 +2623,7 @@ VOID MY_CHECK_KEYDOWN(VOID)
 	}
 
 	//左矢印キーが押されているか判定する
-	if (GetKeyState(VK_LEFT) < 0)
+	if (IskeyDown_Left != 0)
 	{
 		ArrowKey[MY_KEY_ARROW_LEFT] = MY_KEY_DOWN;
 	}
@@ -2619,7 +2633,7 @@ VOID MY_CHECK_KEYDOWN(VOID)
 	}
 
 	//シフトキーが押されているか判定する
-	if (GetKeyState(VK_SHIFT) < 0)
+	if (IsKeyDown_Shift != 0)
 	{
 		ShiftKey = MY_KEY_DOWN;
 	}
@@ -2627,6 +2641,57 @@ VOID MY_CHECK_KEYDOWN(VOID)
 	{
 		ShiftKey = MY_KEY_UP;
 	}
+
+	//修正前のプログラムはコメントアウト
+	////上矢印キーが押されているか判定する
+	//if (GetKeyState(VK_UP) < 0)
+	//{
+	//	ArrowKey[MY_KEY_ARROW_UP] = MY_KEY_DOWN;
+	//}
+	//else
+	//{
+	//	ArrowKey[MY_KEY_ARROW_UP] = MY_KEY_UP;
+	//}
+
+	////右矢印キーが押されているか判定する
+	//if (GetKeyState(VK_RIGHT) < 0)
+	//{
+	//	ArrowKey[MY_KEY_ARROW_RIGHT] = MY_KEY_DOWN;
+	//}
+	//else
+	//{
+	//	ArrowKey[MY_KEY_ARROW_RIGHT] = MY_KEY_UP;
+	//}
+
+	////下矢印キーが押されているか判定する
+	//if (GetKeyState(VK_DOWN) < 0)
+	//{
+	//	ArrowKey[MY_KEY_ARROW_DOWN] = MY_KEY_DOWN;
+	//}
+	//else
+	//{
+	//	ArrowKey[MY_KEY_ARROW_DOWN] = MY_KEY_UP;
+	//}
+
+	////左矢印キーが押されているか判定する
+	//if (GetKeyState(VK_LEFT) < 0)
+	//{
+	//	ArrowKey[MY_KEY_ARROW_LEFT] = MY_KEY_DOWN;
+	//}
+	//else
+	//{
+	//	ArrowKey[MY_KEY_ARROW_LEFT] = MY_KEY_UP;
+	//}
+
+	////シフトキーが押されているか判定する
+	//if (GetKeyState(VK_SHIFT) < 0)
+	//{
+	//	ShiftKey = MY_KEY_DOWN;
+	//}
+	//else
+	//{
+	//	ShiftKey = MY_KEY_UP;
+	//}
 
 }
 
