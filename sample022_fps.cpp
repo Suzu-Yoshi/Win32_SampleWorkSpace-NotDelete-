@@ -316,9 +316,6 @@
 
 #include <stdio.h>
 #include <locale.h>
-
-//▲▲▲▲▲ ヘッダーファイル読み込みに追加 ▲▲▲▲▲
-
 #include <windows.h>
 #include <math.h>
 #include <wingdi.h>
@@ -2815,4 +2812,5 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
 	//デフォルトのウィンドウプロシージャ関数を呼び出す
 	return DefWindowProc(hwnd, msg, wp, lp);
-}*/
+}
+*/

@@ -3,403 +3,411 @@
 /*Ctrl + M の後、Ctrl + L で、プログラム全体の折りたたみ/解除ができます */
 /*Ctrl + M の後、Ctrl + M で、ブロックの折りたたみ/解除ができます		*/
 /*◎プログラムが入力できたら、関数調べや、プログラムの改造をしてみよう	*/
-/*・ヒント：移動スピード      ：MY_SPEED_NORMAL と MY_SPEED_METEOR		*/
-/*・ヒント：ウィンドウの大きさ：WIN_WIDTH と WIN_HEIGHT					*/
 
 /*
-◎マクロ定義に追加
-	・#define AVE_FPS 60 の下に追加
+◎ヘッダーファイル読み込みに追加
 
-	#define MY_KEY_DOWN			1	//キーを押したとき
-	#define MY_KEY_UP			0	//キーを上げたとき
-
-	#define MY_KEY_ARROW_UP		0	//上矢印キー
-	#define MY_KEY_ARROW_RIGHT	1	//右矢印キー
-	#define MY_KEY_ARROW_DOWN	2	//下矢印キー
-	#define MY_KEY_ARROW_LEFT	3	//左矢印キー
-
-	#define MY_SPEED_NORMAL		1	//普通のスピード
-	#define MY_SPEED_METEOR		8	//速いスピード(METEOR:メテオ:隕石)
-
-◎プロトタイプ宣言を追加
-	・VOID MY_FPS_WAIT(VOID); の下に追加
-
-	//仮想キーコードを整形する関数
-	VOID MY_FORMAT_KEYCODE(WPARAM,int);
-
-	//仮想キーコードを文字に整形する関数
-	VOID MY_FORMAT_KEYCHAR(WPARAM, int);
-
-	//どのキーを押しているか判定
-	VOID MY_CHECK_KEYDOWN(VOID);
-
-	//ビットマップを移動させる関数
-	VOID MY_MOVE_BITMAP(MY_BMP *);
+	#include <mmsystem.h>
+	#include<digitalv.h>
+	#pragma comment (lib, "winmm.lib")
 
 ◎グローバル変数に追加
-	・DWORD		fps_count; の下に追加
 
-	//キーコードを入れる変数
-	TCHAR Str_KeyCode[64] = TEXT("キーコード：--");
-
-	//キー文字を入れる変数
-	TCHAR Str_KeyValue[64] = TEXT("キー文字：--");
+	//音を再生するキーの状態を入れる変数
+	int PlaySoundKey = MY_KEY_UP;
 
 	//キーボードの状態を入れる変数
-	TCHAR Str_KeyState[64] = TEXT("キーの状態:--");
+	BYTE KeyBoard[256];
 
-	//矢印キーの状態を入れる配列
-	int ArrowKey[4] = {
-		MY_KEY_UP,
-		MY_KEY_UP,
-		MY_KEY_UP,
-		MY_KEY_UP };
+	//MP3のファイルを管理する変数
+	MCI_OPEN_PARMS open1;
+	MCI_OPEN_PARMS open2;
+	MCI_OPEN_PARMS open3;
 
-	//シフトキーの状態を入れる変数
-	int ShiftKey = MY_KEY_UP;
+	//再生情報を管理する変数
+	MCI_PLAY_PARMS play1;
+	MCI_PLAY_PARMS play2;
+	MCI_PLAY_PARMS play3;
 
-	//移動速度を保存する変数
-	int Speed = MY_SPEED_NORMAL;
+	//音楽ファイルの戻り値を入れる変数
+	int res_sound = 0;
 
-◎WinMainのWhile文の中に追加する
-	while (GetMessage(&msg, NULL, 0, 0))
+◎プロトタイプ宣言を追加
+	//音を鳴らす関数
+	VOID MY_SOUND(VOID);
+
+◎MY_CHECK_KEYDOWNを修正
+	・関数の最初に追加
+	//GetKeyboardState()関数
+	//引数として、BYTE型の配列(256個)を受け取る
+	//すべての仮想キーの現在の状態を一度に取得する
+	//最上位ビットが 1 のときはキーが押されている
+	//               0 のときはキーが押されていない
+
+	//最下位ビットが 1 のときはキーがトグル状態にある
+	//               0 のときはトグルが解除されている
+	//たとえば、CapsLock キーが ON になっているときは、トグル状態になる。
+
+	//すべての仮想キーの現在の状態を一気に取得する
+	GetKeyboardState(KeyBoard);
+
+	//仮想キーコードで、A～Z、0～9は、ASCIIコードを指定
+	BYTE IskeyDown_W = KeyBoard['W'] & 0x80;
+	BYTE IskeyDown_D = KeyBoard['D'] & 0x80;
+	BYTE IskeyDown_A = KeyBoard['A'] & 0x80;
+	BYTE IskeyDown_S = KeyBoard['S'] & 0x80;
+	BYTE IsKeyDown_B = KeyBoard['B'] & 0x80;
+
+	//Wキーが押されているか判定する
+	if (IskeyDown_W != 0)
 	{
-		//▼▼▼▼▼ WinMainに追加する ▼▼▼▼▼
-
-		//仮想キーコードを文字に変換する
-		TranslateMessage(&msg);
-
-		//▲▲▲▲▲ WinMainに追加する ▲▲▲▲▲
-		DispatchMessage(&msg);
+		ArrowKey[MY_KEY_ARROW_UP] = MY_KEY_DOWN;
+	}
+	else
+	{
+		ArrowKey[MY_KEY_ARROW_UP] = MY_KEY_UP;
 	}
 
-◎MY_SetClientSizeの修正【忘れずに修正してください】
-
-	//サイズを同じにする
-	rect_c.bottom = WIN_HEIGHT;
-	rect_c.right = WIN_WIDTH;
-
-◎MY_DRAWの修正
-	・TextOut(hdc, 100, tm.tmHeight * 2, Str_fps_W, lstrlen(Str_fps_W)); の下に追加
-
-	//仮想キーコードを描画
-	TextOut(hdc, 100, tm.tmHeight * 3, Str_KeyCode, lstrlen(Str_KeyCode));
-
-	//仮想キー状態を文字にして描画
-	TextOut(hdc, 100, tm.tmHeight * 4, Str_KeyState, lstrlen(Str_KeyState));
-
-	//仮想キーコードを文字にして描画
-	TextOut(hdc, 100, tm.tmHeight * 5, Str_KeyValue, lstrlen(Str_KeyValue));
-
-◎MY_DRAW_BITMAPに追加
-	・Rectangle(…); の下に追加する
-
-	//背景色を指定して描画
-	TransparentBlt(
-		hdc,				//描画するデバイスコンテキスト
-		bmp_dragon.x,		//描画開始位置X座標
-		bmp_dragon.y,		//描画開始位置Y座標
-		bmp_dragon.width,	//描画する幅
-		bmp_dragon.height,	//描画する高さ
-		bmp_dragon.mhdc,	//ビットマップのデバイスコンテキスト
-		0,					//ビットマップをどこからコピーするか(X座標)
-		0,					//ビットマップをどこからコピーするか(Y座標)
-		bmp_dragon.width,	//ビットマップをどこまでコピーするか(X座標)
-		bmp_dragon.height,	//ビットマップをどこまでコピーするか(Y座標)
-		GetPixel(bmp_dragon.mhdc, 0, 0));//透過色を指定
-
-
-◎MY_DRAW_BITMAPを修正
-	・コメントアウト
-
-	  //+++++ ビットマップを描画 +++++ から
-	  SelectObject(hdc, GetStockObject(WHITE_BRUSH));までを
-	  コメントアウトする【プログラム参考例を要参照】
-
-
-
-
-
-
-
-◎関数を追加
-
-	//########## どのキーを押しているか判定する関数 ##########
-	VOID MY_CHECK_KEYDOWN(VOID)
+	//Dキーが押されているか判定する
+	if (IskeyDown_D != 0)
 	{
-		//上矢印キーが押されているか判定する
-		if (GetKeyState(VK_UP) < 0)
-		{
-			ArrowKey[MY_KEY_ARROW_UP] = MY_KEY_DOWN;
-		}
-		else
-		{
-			ArrowKey[MY_KEY_ARROW_UP] = MY_KEY_UP;
-		}
-
-		//右矢印キーが押されているか判定する
-		if (GetKeyState(VK_RIGHT) < 0)
-		{
-			ArrowKey[MY_KEY_ARROW_RIGHT] = MY_KEY_DOWN;
-		}
-		else
-		{
-			ArrowKey[MY_KEY_ARROW_RIGHT] = MY_KEY_UP;
-		}
-
-		//下矢印キーが押されているか判定する
-		if (GetKeyState(VK_DOWN) < 0)
-		{
-			ArrowKey[MY_KEY_ARROW_DOWN] = MY_KEY_DOWN;
-		}
-		else
-		{
-			ArrowKey[MY_KEY_ARROW_DOWN] = MY_KEY_UP;
-		}
-
-		//左矢印キーが押されているか判定する
-		if (GetKeyState(VK_LEFT) < 0)
-		{
-			ArrowKey[MY_KEY_ARROW_LEFT] = MY_KEY_DOWN;
-		}
-		else
-		{
-			ArrowKey[MY_KEY_ARROW_LEFT] = MY_KEY_UP;
-		}
-
-		//シフトキーが押されているか判定する
-		if (GetKeyState(VK_SHIFT) < 0)
-		{
-			ShiftKey = MY_KEY_DOWN;
-		}
-		else
-		{
-			ShiftKey = MY_KEY_UP;
-		}
+		ArrowKey[MY_KEY_ARROW_RIGHT] = MY_KEY_DOWN;
+	}
+	else
+	{
+		ArrowKey[MY_KEY_ARROW_RIGHT] = MY_KEY_UP;
 	}
 
-
-
-
-
-
-
-	//########## ビットマップを移動させる関数 ##########
-	VOID MY_MOVE_BITMAP(MY_BMP *bmp)
+	//Sキーが押されているか判定する
+	if (IskeyDown_S != 0)
 	{
-		//シフトキーが押されているときは早く動ける
-		if (ShiftKey == MY_KEY_DOWN)
-		{
-			Speed = MY_SPEED_METEOR;
-		}
-		else
-		{
-			Speed = MY_SPEED_NORMAL;
-		}
-
-		//上矢印キーが押されていれば上に動かす
-		if (ArrowKey[MY_KEY_ARROW_UP] == MY_KEY_DOWN)
-		{
-			bmp->y -= Speed;
-		}
-
-		//右矢印キーが押されていれば右に動かす
-		if (ArrowKey[MY_KEY_ARROW_RIGHT] == MY_KEY_DOWN)
-		{
-			bmp->x += Speed;
-		}
-
-		//下矢印キーが押されていれば下に動かす
-		if (ArrowKey[MY_KEY_ARROW_DOWN] == MY_KEY_DOWN)
-		{
-			bmp->y += Speed;
-		}
-
-		//左矢印キーが押されていれば左に動かす
-		if (ArrowKey[MY_KEY_ARROW_LEFT] == MY_KEY_DOWN)
-		{
-			bmp->x -= Speed;
-		}
+		ArrowKey[MY_KEY_ARROW_DOWN] = MY_KEY_DOWN;
+	}
+	else
+	{
+		ArrowKey[MY_KEY_ARROW_DOWN] = MY_KEY_UP;
 	}
 
-	//########## キーボードの仮想コードを整形する関数 ##########
-	VOID MY_FORMAT_KEYCODE(WPARAM wp,int message)
+	//Aキーが押されているか判定する
+	if (IskeyDown_A != 0)
 	{
-		//シフトキーを押しているか判断
-		if (GetKeyState(VK_SHIFT) < 0)	//キーが押されているとき
+		ArrowKey[MY_KEY_ARROW_LEFT] = MY_KEY_DOWN;
+	}
+	else
+	{
+		ArrowKey[MY_KEY_ARROW_LEFT] = MY_KEY_UP;
+	}
+
+	//Bキーが押されているか判定する
+	if (IsKeyDown_B != 0)
+	{
+		ShiftKey = MY_KEY_DOWN;
+	}
+	else
+	{
+		ShiftKey = MY_KEY_UP;
+	}
+
+	//Pキーが押されているか判定する
+	if (IsKeyDown_P != 0)
+	{
+		PlayKey = MY_KEY_DOWN;
+	}
+	else
+	{
+		PlayKey = MY_KEY_UP;
+	}
+
+	return;
+
+	
+◎音を鳴らす関数を追加
+	
+	//########## 音を鳴らす関数 ##########
+	VOID MY_SOUND(VOID)
+	{
+		//周波数の参考サイト
+		//https://tomari.org/main/java/oto.html
+		int Doremi[7] = {
+			261,
+			293,
+			329,
+			349,
+			391,
+			440,
+			493
+		};
+
+		//楽譜
+		int Gakuhu[7][2]
 		{
-			//キーコードを文字列として整形
-			wsprintf(Str_KeyState, TEXT("キー状態：Shift：%0X"), wp);
-		}
-		//Ctrlキーを押しているか判断
-		else if(GetKeyState(VK_CONTROL) < 0)	//キーが押されているとき
+			{ Doremi[0],500 },
+			{ Doremi[1],500 },
+			{ Doremi[2],500 },
+			{ Doremi[3],500 },
+			{ Doremi[4],500 },
+			{ Doremi[5],500 },
+			{ Doremi[6],500 },
+		};
+
+		//★★★音を再生するモードを切り替え★★★
+		int sound_mode = 5;
+
+		if (PlaySoundKey == MY_KEY_DOWN)
 		{
-			//キーコードを文字列として整形
-			wsprintf(Str_KeyState, TEXT("キー状態：Ctrl：%0X"), wp);
-		}
-		//押していないとき
-		else
-		{
-			//キーコードを文字列として整形
-			wsprintf(Str_KeyState, TEXT("キー状態：--"), wp);
-		}
+			switch (sound_mode)
+			{
+			case 0:
+				//ビープ音を鳴らす
+				//関数呼び出しとサウンド再生は非同期的に行なわれる
 
+				MessageBeep(
+					-1  // サウンドタイプ
+				);
+				Sleep(100);
 
+				//サウンドタイプの種類
+				//-1						コンピュータのスピーカから発生する標準的なビープ音
+				//MB_ICONASTERISK			SystemAsterisk		メッセージ（情報）
+				//MB_ICONEXCLAMATION		SystemExclamation	メッセージ（警告）
+				//MB_ICONHAND				SystemHand			システムエラー
+				//MB_ICONQUESTION			SystemQuestion		メッセージ（問い合わせ）
+				//MB_OK						SystemDefault		一般の警告音
 
-		switch (message)
-		{
-			case WM_KEYDOWN:
-				//キーを押したとき
+			case 1:
+				//周波数で音を鳴らす
+				//関数呼び出しとサウンド再生は同期的に行なわれる
 
-				//キーコードを文字列として整形
-				wsprintf(Str_KeyCode, TEXT("キーコード：%0X"), wp);
+				Beep(
+					440,	//音の周波数を、37～32767の間の値で指定
+					1000	//音を鳴らす時間をミリ秒単位で指定
+				);
 
-				break;
+			case 2:
+				//楽譜のように演奏する
 
-			case WM_KEYUP:
-				//キーを上げたとき
-
-				//キーコードを文字列として整形
-				wsprintf(Str_KeyCode, TEXT("キーコード：--"));
-
-				break;
-
-			case WM_SYSKEYDOWN:
-				//システムキーを押したとき
-
-				//Altキーを押したとき
-				if (wp == VK_MENU)
+				int i;
+				for (i = 0; i < 7; i++)
 				{
-					//キーコードを文字列として整形
-					wsprintf(Str_KeyCode, TEXT("システムキーコード：Alt：%0X"), wp);
+					Beep(Gakuhu[i][0], Gakuhu[i][1]);
 				}
 
 				break;
 
-			case WM_SYSKEYUP:
-				//システムキーを上げたとき
+			case 3:
+				//waveファイルを再生
 
-				//キーコードを文字列として整形
-				wsprintf(Str_KeyCode, TEXT("システムキーコード：--"));
+				//音を再生し続けるのがポイント！
+
+				PlaySound(
+					SOUND_KOUKA_1,	//再生対象のサウンド
+					NULL,			//インスタンスハンドル/ファイルならNULL
+					SND_FILENAME	//ファイル名で指定
+					| SND_LOOP		//サウンドをループ
+					| SND_ASYNC		//サウンドを非同期再生
+				);
+
+				//音を停止する
+				//PlaySound(NULL,NULL,SND_PURGE);
 
 				break;
+
+			case 4:
+				//waveファイルを再生
+
+				//同時再生できないのがポイント！
+
+				PlaySound(
+					SOUND_KOUKA_1,	//再生対象のサウンド
+					NULL,			//インスタンスハンドル/ファイルならNULL
+					SND_FILENAME	//ファイル名で指定
+					| SND_LOOP		//サウンドをループ
+					| SND_ASYNC		//サウンドを非同期再生
+				);
+
+				PlaySound(
+					SOUND_KOUKA_2,	//再生対象のサウンド
+					NULL,			//インスタンスハンドル/ファイルならNULL
+					SND_FILENAME	//ファイル名で指定
+					| SND_SYNC		//サウンドを同期再生
+				);
+
+				break;
+
+			case 5:
+				//mp3ファイルを再生
+				mciSendCommand(
+					open1.wDeviceID, 
+					MCI_PLAY, 
+					MCI_NOTIFY,				//MM_MCINOTIFYを再生終了後,発行
+					(DWORD_PTR)&play1
+				);
+
+				//mp3ファイルを再生
+				mciSendCommand(
+					open2.wDeviceID,
+					MCI_PLAY,
+					MCI_DGV_PLAY_REPEAT,	//ループ再生
+					(DWORD_PTR)&play2
+				);
+
+				//waveファイルを再生
+				mciSendCommand(
+					open3.wDeviceID,
+					MCI_PLAY,
+					MCI_NOTIFY,				//MM_MCINOTIFYを再生終了後,発行
+					(DWORD_PTR)&play3
+				);
+				break;
+
+			}
 		}
 	}
 
-	//########## 仮想キーコードを文字に整形する関数 ##########
-	VOID MY_FORMAT_KEYCHAR(WPARAM wp, int message)
+◎WM_CREATEに追加
+	・SelectObject(bmp_dragon_mask.mhdc, bmp_dragon_mask.hbmp); の下に追加
+
+	//MP3の情報を設定
+	open1.lpstrDeviceType = TEXT("MPEGVideo");
+	open1.lpstrElementName = SOUND_BGM_MP3_1;
+
+	//MP3を取得
+	res_sound = mciSendCommand(
+		0,
+		MCI_OPEN, 			//デバイスをオープン
+		MCI_OPEN_TYPE		//MP3ファイルの場合
+		| MCI_OPEN_ELEMENT,	//MP3ファイルの場合
+		(DWORD_PTR)&open1);
+
+	//MP3が読み込めなかったとき
+	if (res_sound)
 	{
-
-		switch (message)
-		{
-		case WM_CHAR:
-			//キーコードを文字に変換したとき
-
-			//キー文字を文字列として整形
-			wsprintf(Str_KeyValue, TEXT("キー文字：%s"), (PTSTR)&wp);
-
-			break;
-
-		case WM_KEYUP:
-			//キーを上げたとき
-
-			//キー文字を文字列として整形
-			wsprintf(Str_KeyValue, TEXT("キー文字：--"));
-
-			break;
-
-		case WM_SYSCHAR:
-			//キーコードを文字に変換したとき
-
-			//キー文字を文字列として整形
-			wsprintf(Str_KeyValue, TEXT("システムキー文字：%s"), (PTSTR)&wp);
-
-			break;
-
-		case WM_SYSKEYUP:
-			//システムキーを上げたとき
-
-			//キー文字を文字列として整形
-			wsprintf(Str_KeyValue, TEXT("システムキー文字：--"));
-
-			break;
-		}
+		MessageBox(hwnd, ERR_MSG_NO_READ_MP3, ERR_MSG_TITLE, MB_OK);
 	}
+
+	//MP3の情報を設定
+	open2.lpstrDeviceType = TEXT("MPEGVideo");
+	open2.lpstrElementName = SOUND_KOUKA_MP3_1;
+
+	//mciSendCommandでは、waveファイルも読み込み可能
+
+	//MP3を取得
+	mciSendCommand(
+		0,
+		MCI_OPEN, 			//デバイスをオープン
+		MCI_OPEN_TYPE		//MP3ファイルの場合
+		| MCI_OPEN_ELEMENT,	//MP3ファイルの場合
+		(DWORD_PTR)&open2);
+
+	//MP3が読み込めなかったとき
+	if (res_sound)
+	{
+		MessageBox(hwnd, ERR_MSG_NO_READ_MP3, ERR_MSG_TITLE, MB_OK);
+	}
+
+	//waveの情報を設定
+	open3.lpstrDeviceType = (LPCWSTR)MCI_DEVTYPE_WAVEFORM_AUDIO;
+	open3.lpstrElementName = SOUND_KOUKA_1;
+
+	//waveを取得
+	mciSendCommand(
+		0,
+		MCI_OPEN,			//デバイスをオープン
+		MCI_OPEN_TYPE		//waveファイルの場合
+		| MCI_OPEN_TYPE_ID	//waveファイルの場合
+		| MCI_OPEN_ELEMENT,	//waveファイルの場合
+		(DWORD_PTR)&open3
+		);
+
+	//waveが読み込めなかったとき
+	if (res_sound)
+	{
+		MessageBox(hwnd, ERR_MSG_NO_READ_MP3, ERR_MSG_TITLE, MB_OK);
+	}
+
+	//コールバックウィンドウのハンドル
+	//ウインドウプロシージャのウィンドウ
+	//→MM_MCINOTIFYメッセージ処理を記述
+	play1.dwCallback = (DWORD)hwnd;
+	play2.dwCallback = (DWORD)hwnd;
+	play3.dwCallback = (DWORD)hwnd;
 
 ◎WM_TIMERに追加
-	・MY_FPS_UPDATE(); の下に追加する
+	・MY_MOVE_BITMAP(&bmp_dragon); の下に追加
 
-	//矢印キーを押しているか判定する
-	MY_CHK_KEY_ARROW();
-
-	//ビットマップを移動させる
-	MY_MOVE_BITMAP(&bmp_dragon);
+	//音を鳴らす
+	MY_SOUND();
 
 ◎メッセージを追加
-	・同じメッセージ(WM_KEYDOWNなど)があれば、その箇所の修正を行う
 
-	case WM_KEYDOWN:
-		//キーボードでキーを押したとき
+	case MM_MCINOTIFY:
+	//MP3を再生
 
-		//コメントアウト
-		//TCHAR Str_KeyValue[128];
-		//wsprintf(Str_KeyValue, TEXT("キーコード：%0X"),wp);
-		//MessageBox(hwnd, Str_KeyValue, TEXT("KeyDown"), MB_OK);
-
-		//仮想キーコードを整形する
-		MY_FORMAT_KEYCODE(wp, msg);
-
+	if (lp == open1.wDeviceID)
+	{
+		//再生が終了したとき
+		if (wp == MCI_NOTIFY_SUCCESSFUL)
+		{
+			//シークバーを先頭に戻す
+			mciSendCommand(
+				open1.wDeviceID,
+				MCI_SEEK,
+				MCI_SEEK_TO_START,
+				0
+				);
+		}
 		return 0;
-
-	case WM_KEYUP:
-		//キーボードでキーを押したとき
-
-		//仮想キーコードを整形する
-		MY_FORMAT_KEYCODE(wp, msg);
-
-		//仮想キーコードを文字として整形する
-		MY_FORMAT_KEYCHAR(wp, msg);
-
+	}
+	else if (lp == open2.wDeviceID)
+	{
+		//再生が終了したとき
+		if (wp == MCI_NOTIFY_SUCCESSFUL)
+		{
+			//シークバーを先頭に戻す
+			mciSendCommand(
+			open2.wDeviceID,
+			MCI_SEEK,
+			MCI_SEEK_TO_START,
+			0
+			);
+		}
 		return 0;
-
-	case WM_CHAR:
-		//仮想キーコードを文字に変換したとき
-		//WM_KEYDOWNのあとに、このメッセージが発行される
-
-		//仮想キーコードを文字として整形する
-		MY_FORMAT_KEYCHAR(wp, msg);
-
+	}
+	else if (lp == open3.wDeviceID)
+	{
+		//再生が終了したとき
+		if (wp == MCI_NOTIFY_SUCCESSFUL)
+		{
+			//シークバーを先頭に戻す
+			mciSendCommand(
+			open3.wDeviceID,
+			MCI_SEEK,
+			MCI_SEEK_TO_START,
+			0
+			);
+		}
 		return 0;
+	}
 
-	case WM_SYSKEYDOWN:
-		//システム側のキー(Altキー)を押したとき
+	break;
 
-		//仮想キーコードを整形する
-		MY_FORMAT_KEYCODE(wp, msg);
+◎WM_DESTROYに追加 ▼▼▼▼▼
 
-		return 0;
+	・DeleteDC(hdc_double); の下に追加
 
-	case WM_SYSKEYUP:
-		//システム側のキー(Altキー)を上げたとき
+	//MP3ファイルを閉じる
+	mciSendCommand(open1.wDeviceID, MCI_CLOSE, 0, 0);
+	mciSendCommand(open2.wDeviceID, MCI_CLOSE, 0, 0);
 
-		//仮想キーコードを整形する
-		MY_FORMAT_KEYCODE(wp, msg);
+	//waveファイルを閉じる
+	mciSendCommand(open3.wDeviceID, MCI_CLOSE, 0, 0);
 
-		//仮想キーコードを文字として整形する
-		MY_FORMAT_KEYCHAR(wp, msg);
+*/
 
-		return 0;
 
-	case  WM_SYSCHAR:
 
-		//仮想システムキーコードを文字に変換したとき
-		//WM_SYSKEYDOWNのあとに、このメッセージが発行される
 
-		//仮想キーコードを文字として整形する
-		MY_FORMAT_KEYCHAR(wp, msg);
 
-		return 0;
-		*/
 
 
 
@@ -453,11 +461,6 @@
 
 
 
-
-
-
-
-/*
 //########## ヘッダーファイル読み込み ##########
 
 #include <stdio.h>
@@ -466,6 +469,14 @@
 #include <math.h>
 #include <wingdi.h>
 #pragma comment (lib, "msimg32.lib")
+
+//▼▼▼▼▼ ヘッダーファイル読み込みに追加 ▼▼▼▼▼
+
+#include <mmsystem.h>
+#include<digitalv.h>
+#pragma comment (lib, "winmm.lib")
+
+//▲▲▲▲▲ ヘッダーファイル読み込みに追加 ▲▲▲▲▲
 
 //########## マクロ定義 ##########
 
@@ -532,12 +543,28 @@
 //#define TIMER_ID_1	1		//タイマー１
 //#define TIMER_ID_2	2		//タイマー２
 
+//▼▼▼▼▼ マクロ定義に追加 ▼▼▼▼▼
+
+//MP3読み込みエラー
+#define ERR_MSG_NO_READ_MP3	TEXT("MP3が\
+	 読み込めませんでした\nプログラムを終了します")
+
+//効果音
+#define SOUND_KOUKA_1		TEXT(".\\MY_SOUND\\don.wav")
+#define SOUND_KOUKA_2		TEXT(".\\MY_SOUND\\chime.wav")
+
+#define SOUND_KOUKA_MP3_1	TEXT(".\\MY_SOUND\\magical_1.mp3")
+#define SOUND_KOUKA_MP3_2	TEXT(".\\MY_SOUND\\magical_2.mp3")
+
+//BGM
+#define SOUND_BGM_MP3_1		TEXT(".\\MY_SOUND\\field.mp3")
+
+//▲▲▲▲▲ マクロ定義に追加 ▲▲▲▲▲
+
 #define TIMER_ID_FPS	100	//FPSタイマー
 
 #define DISP_FPS		60	//画面のFPS
 #define AVE_FPS			60	//平均を取るサンプル数
-
-//▼▼▼▼▼ マクロ定義に追加 ▼▼▼▼▼
 
 #define MY_KEY_DOWN	1	//キーを押したとき
 #define MY_KEY_UP	0	//キーを上げたとき
@@ -551,8 +578,6 @@
 
 #define MY_SPEED_NORMAL		1	//普通のスピード
 #define MY_SPEED_METEOR		8	//速いスピード(METEOR:メテオ:隕石)
-
-//▲▲▲▲▲ マクロ定義に追加 ▲▲▲▲▲
 
 //########## 列挙型 ##########
 
@@ -638,8 +663,6 @@ BOOL MY_FPS_UPDATE(VOID);
 //指定したFPSになるように待つ関数
 VOID MY_FPS_WAIT(VOID);
 
-//▼▼▼▼▼ プロトタイプ宣言を追加 ▼▼▼▼▼
-
 //仮想キーコードを整形する関数
 VOID MY_FORMAT_KEYCODE(WPARAM, int);
 
@@ -651,6 +674,11 @@ VOID MY_CHECK_KEYDOWN(VOID);
 
 //ビットマップを移動させる関数
 VOID MY_MOVE_BITMAP(MY_BMP *);
+
+//▼▼▼▼▼ プロトタイプ宣言を追加 ▼▼▼▼▼
+
+//音を鳴らす関数
+VOID MY_SOUND(VOID);
 
 //▲▲▲▲▲ プロトタイプ宣言を追加 ▲▲▲▲▲
 
@@ -697,8 +725,7 @@ DWORD		fps_sta_tm;	//0フレーム目の開始時刻
 DWORD		fps_end_tm;	//設定したフレームの終了時刻
 DWORD		fps_count;	//フレームのカウント
 
-//▼▼▼▼▼ グローバル変数に追加 ▼▼▼▼▼
-//キーコードを入れる変数
+						//キーコードを入れる変数
 TCHAR Str_KeyCode[64] = TEXT("キーコード：--");
 
 //キー文字を入れる変数
@@ -719,6 +746,27 @@ int ShiftKey = MY_KEY_UP;
 
 //移動速度を保存する変数
 int Speed = MY_SPEED_NORMAL;
+
+//▼▼▼▼▼ グローバル変数に追加 ▼▼▼▼▼
+
+//音を再生するキーの状態を入れる変数
+int PlaySoundKey = MY_KEY_UP;
+
+//キーボードの状態を入れる変数
+BYTE KeyBoard[256];
+
+//MP3のファイルを管理する変数
+MCI_OPEN_PARMS open1;
+MCI_OPEN_PARMS open2;
+MCI_OPEN_PARMS open3;
+
+//再生情報を管理する変数
+MCI_PLAY_PARMS play1;
+MCI_PLAY_PARMS play2;
+MCI_PLAY_PARMS play3;
+
+//音楽ファイルの戻り値を入れる変数
+int res_sound = 0;
 
 //▲▲▲▲▲ グローバル変数に追加 ▲▲▲▲▲
 
@@ -777,12 +825,8 @@ int WINAPI WinMain(
 	//メッセージを受け取り続ける
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
-		//▼▼▼▼▼ WinMainに追加する ▼▼▼▼▼
-
 		//仮想キーコードを文字に変換する
 		TranslateMessage(&msg);
-
-		//▲▲▲▲▲ WinMainに追加する ▲▲▲▲▲
 
 		DispatchMessage(&msg);
 
@@ -1046,14 +1090,9 @@ VOID MY_SetClientSize(HWND hWnd)
 		rect_set.bottom,		//ウィンドウの高さ
 		SWP_SHOWWINDOW);		//ウィンドウを表示
 
-	//▼▼▼▼▼ MY_SetClientSizeの修正 ▼▼▼▼▼
-
 	//サイズを同じにする
 	rect_c.bottom = WIN_HEIGHT;
 	rect_c.right = WIN_WIDTH;
-
-	//▲▲▲▲▲ MY_SetClientSizeの修正 ▲▲▲▲▲
-
 }
 
 //########## 画像を描画する関数 ##########
@@ -1134,8 +1173,6 @@ VOID MY_DRAW(HDC hdc)
 
 	TextOut(hdc, 100, tm.tmHeight * 2, Str_fps_W, lstrlen(Str_fps_W));
 
-	//▼▼▼▼▼ MY_DRAWを描画 ▼▼▼▼▼
-
 	//仮想キーコードを描画
 	TextOut(hdc, 100, tm.tmHeight * 3, Str_KeyCode, lstrlen(Str_KeyCode));
 
@@ -1144,8 +1181,6 @@ VOID MY_DRAW(HDC hdc)
 
 	//仮想キーコードを文字にして描画
 	TextOut(hdc, 100, tm.tmHeight * 5, Str_KeyValue, lstrlen(Str_KeyValue));
-
-	//▲▲▲▲▲ MY_DRAWを描画 ▲▲▲▲▲
 
 }
 
@@ -2333,9 +2368,7 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 		rect_c.right,	//四角の右下のX座標
 		rect_c.bottom);	//四角の右下のY座標
 
-	//▼▼▼▼▼ MY_DRAW_BITMAPに追加 ▼▼▼▼▼
-
-	//背景色を指定して描画
+						//背景色を指定して描画
 	TransparentBlt(
 		hdc,				//描画するデバイスコンテキスト
 		bmp_dragon.x,		//描画開始位置X座標
@@ -2349,220 +2382,215 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 		bmp_dragon.height,	//ビットマップをどこまでコピーするか(Y座標)
 		GetPixel(bmp_dragon.mhdc, 0, 0));//透過色を指定
 
-	//▲▲▲▲▲ MY_DRAW_BITMAPに追加 ▲▲▲▲▲
 
-	//▼▼▼▼▼ MY_DRAW_BITMAPを修正 ▼▼▼▼▼
+		//コメントアウト
 
-	//コメントアウト
+		////+++++ビットマップを描画++++++++++++++++++++
 
-	////+++++ビットマップを描画++++++++++++++++++++
+		////ビットマップの表示位置を設定
+		//bmp_dragon.x = 100;
+		//bmp_dragon.y = 100;
 
-	////ビットマップの表示位置を設定
-	//bmp_dragon.x = 100;
-	//bmp_dragon.y = 100;
+		////ビットマップを描画
+		//BitBlt(
+		//	hdc,				//描画するデバイスコンテキスト
+		//	bmp_dragon.x,		//描画開始位置X座標
+		//	bmp_dragon.y,		//描画開始位置Y座標
+		//	bmp_dragon.width,	//描画する幅
+		//	bmp_dragon.height,	//描画する高さ
+		//	bmp_dragon.mhdc,	//ビットマップのデバイスコンテキスト
+		//	0,					//ビットマップをどこからコピーするか(X座標)
+		//	0,					//ビットマップをどこからコピーするか(X座標)
+		//	SRCCOPY);			//塗りつぶしのオプション(ラスタオペレーションコード)
 
-	////ビットマップを描画
-	//BitBlt(
-	//	hdc,				//描画するデバイスコンテキスト
-	//	bmp_dragon.x,		//描画開始位置X座標
-	//	bmp_dragon.y,		//描画開始位置Y座標
-	//	bmp_dragon.width,	//描画する幅
-	//	bmp_dragon.height,	//描画する高さ
-	//	bmp_dragon.mhdc,	//ビットマップのデバイスコンテキスト
-	//	0,					//ビットマップをどこからコピーするか(X座標)
-	//	0,					//ビットマップをどこからコピーするか(X座標)
-	//	SRCCOPY);			//塗りつぶしのオプション(ラスタオペレーションコード)
+		////+++++ビットマップの背景を透過して描画(お手軽)++++++++++++++++++++
 
-	////+++++ビットマップの背景を透過して描画(お手軽)++++++++++++++++++++
-
-	////ビットマップの表示位置を設定
-	//bmp_dragon.x = 200;
-	//bmp_dragon.y = 200;
+		////ビットマップの表示位置を設定
+		//bmp_dragon.x = 200;
+		//bmp_dragon.y = 200;
 
 
-	////背景色を指定して描画
-	//TransparentBlt(
-	//	hdc,				//描画するデバイスコンテキスト
-	//	bmp_dragon.x,		//描画開始位置X座標
-	//	bmp_dragon.y,		//描画開始位置Y座標
-	//	bmp_dragon.width,	//描画する幅
-	//	bmp_dragon.height,	//描画する高さ
-	//	bmp_dragon.mhdc,	//ビットマップのデバイスコンテキスト
-	//	0,					//ビットマップをどこからコピーするか(X座標)
-	//	0,					//ビットマップをどこからコピーするか(Y座標)
-	//	bmp_dragon.width,	//ビットマップをどこまでコピーするか(X座標)
-	//	bmp_dragon.height,	//ビットマップをどこまでコピーするか(Y座標)
-	//	RGB(107, 140, 148));//GetPixel(bmp_dragon.mhdc,0,0)も可
-	//						//+++++ビットマップの背景を透過して描画(高速描画)++++++++++++++++++++
+		////背景色を指定して描画
+		//TransparentBlt(
+		//	hdc,				//描画するデバイスコンテキスト
+		//	bmp_dragon.x,		//描画開始位置X座標
+		//	bmp_dragon.y,		//描画開始位置Y座標
+		//	bmp_dragon.width,	//描画する幅
+		//	bmp_dragon.height,	//描画する高さ
+		//	bmp_dragon.mhdc,	//ビットマップのデバイスコンテキスト
+		//	0,					//ビットマップをどこからコピーするか(X座標)
+		//	0,					//ビットマップをどこからコピーするか(Y座標)
+		//	bmp_dragon.width,	//ビットマップをどこまでコピーするか(X座標)
+		//	bmp_dragon.height,	//ビットマップをどこまでコピーするか(Y座標)
+		//	RGB(107, 140, 148));//GetPixel(bmp_dragon.mhdc,0,0)も可
+		//						//+++++ビットマップの背景を透過して描画(高速描画)++++++++++++++++++++
 
-	//						//ビットマップの表示位置を設定
-	//bmp_dragon_mask.x = 300;
-	//bmp_dragon_mask.y = 300;
+		//						//ビットマップの表示位置を設定
+		//bmp_dragon_mask.x = 300;
+		//bmp_dragon_mask.y = 300;
 
-	//bmp_dragon_white.x = 300;
-	//bmp_dragon_white.y = 300;
+		//bmp_dragon_white.x = 300;
+		//bmp_dragon_white.y = 300;
 
-	////背景とマスクをANDで転送→マスクの黒い部分は無視される
-	//BitBlt(
-	//	hdc,						//描画するデバイスコンテキスト
-	//	bmp_dragon_mask.x,			//描画開始位置X座標
-	//	bmp_dragon_mask.y,			//描画開始位置Y座標
-	//	bmp_dragon_mask.width,		//描画する幅
-	//	bmp_dragon_mask.height,		//描画する高さ
-	//	bmp_dragon_mask.mhdc,		//ビットマップのデバイスコンテキスト
-	//	0,							//ビットマップをどこからコピーするか(X座標)
-	//	0,							//ビットマップをどこからコピーするか(X座標)
-	//	SRCPAINT);					//塗りつぶしのオプション(ラスタオペレーションコード)
+		////背景とマスクをANDで転送→マスクの黒い部分は無視される
+		//BitBlt(
+		//	hdc,						//描画するデバイスコンテキスト
+		//	bmp_dragon_mask.x,			//描画開始位置X座標
+		//	bmp_dragon_mask.y,			//描画開始位置Y座標
+		//	bmp_dragon_mask.width,		//描画する幅
+		//	bmp_dragon_mask.height,		//描画する高さ
+		//	bmp_dragon_mask.mhdc,		//ビットマップのデバイスコンテキスト
+		//	0,							//ビットマップをどこからコピーするか(X座標)
+		//	0,							//ビットマップをどこからコピーするか(X座標)
+		//	SRCPAINT);					//塗りつぶしのオプション(ラスタオペレーションコード)
 
-	//								//背景とビットマップをORで転送→ビットマップの白い背景は無視される
-	//BitBlt(
-	//	hdc,						//描画するデバイスコンテキスト
-	//	bmp_dragon_white.x,			//描画開始位置X座標
-	//	bmp_dragon_white.y,			//描画開始位置Y座標
-	//	bmp_dragon_white.width,		//描画する幅
-	//	bmp_dragon_white.height,	//描画する高さ
-	//	bmp_dragon_white.mhdc,		//ビットマップのデバイスコンテキスト
-	//	0,							//ビットマップをどこからコピーするか(X座標)
-	//	0,							//ビットマップをどこからコピーするか(X座標)
-	//	SRCAND);					//塗りつぶしのオプション(ラスタオペレーションコード)
+		//								//背景とビットマップをORで転送→ビットマップの白い背景は無視される
+		//BitBlt(
+		//	hdc,						//描画するデバイスコンテキスト
+		//	bmp_dragon_white.x,			//描画開始位置X座標
+		//	bmp_dragon_white.y,			//描画開始位置Y座標
+		//	bmp_dragon_white.width,		//描画する幅
+		//	bmp_dragon_white.height,	//描画する高さ
+		//	bmp_dragon_white.mhdc,		//ビットマップのデバイスコンテキスト
+		//	0,							//ビットマップをどこからコピーするか(X座標)
+		//	0,							//ビットマップをどこからコピーするか(X座標)
+		//	SRCAND);					//塗りつぶしのオプション(ラスタオペレーションコード)
 
-	////+++++ 画像の拡大・縮小 ++++++++++++++++++++
+		////+++++ 画像の拡大・縮小 ++++++++++++++++++++
 
-	////拡大縮小率(倍)
-	//double rate = 2.0;
+		////拡大縮小率(倍)
+		//double rate = 2.0;
 
-	////ビットマップの表示位置を設定
-	//bmp_dragon.x = 50;
-	//bmp_dragon.y = 250;
+		////ビットマップの表示位置を設定
+		//bmp_dragon.x = 50;
+		//bmp_dragon.y = 250;
 
-	////ストレッチモードを指定
-	//SetStretchBltMode(hdc, COLORONCOLOR);
+		////ストレッチモードを指定
+		//SetStretchBltMode(hdc, COLORONCOLOR);
 
-	////ストレッチモードの種類
-	////BLACKONWHITE	残す点の色と取り除く点の色を論理 AND 演算子で結合
-	////COLORONCOLOR	取り除く点の情報を保存することなく、削除します
-	////HALFTONE		コピー先のブロックの平均的な色が、コピー元のピクセルの色に近い色
-	////				HALFTONEモードを設定した場合は、ブラシのずれを防ぐため
-	////				SetBrushOrgEx() 関数を呼び出す
-	////WHITEONBLACK	残す点の色と取り除く点の色を論理 OR 演算子で結合
-	////STRETCH_ANDSCANS		BLACKONWHITE と同じ
-	////STRETCH_DELETESCANS	COLORONCOLOR と同じです
-	////STRETCH_HALFTONE		HALFTONE と同じです
-	////STRETCH_ORSCANS		WHITEONBLACK と同じです
+		////ストレッチモードの種類
+		////BLACKONWHITE	残す点の色と取り除く点の色を論理 AND 演算子で結合
+		////COLORONCOLOR	取り除く点の情報を保存することなく、削除します
+		////HALFTONE		コピー先のブロックの平均的な色が、コピー元のピクセルの色に近い色
+		////				HALFTONEモードを設定した場合は、ブラシのずれを防ぐため
+		////				SetBrushOrgEx() 関数を呼び出す
+		////WHITEONBLACK	残す点の色と取り除く点の色を論理 OR 演算子で結合
+		////STRETCH_ANDSCANS		BLACKONWHITE と同じ
+		////STRETCH_DELETESCANS	COLORONCOLOR と同じです
+		////STRETCH_HALFTONE		HALFTONE と同じです
+		////STRETCH_ORSCANS		WHITEONBLACK と同じです
 
-	//StretchBlt(
-	//	hdc,					//コピー先のデバイスコンテキストのハンドル
-	//	bmp_dragon.x,			//コピー先の長方形の左上 X座標
-	//	bmp_dragon.y,			//コピー先の長方形の左上 Y座標
-	//	bmp_dragon.width*rate,	//コピー先の長方形の右下 X座標
-	//	bmp_dragon.height*rate,	//コピー先の長方形の右下 X座標
-	//	bmp_dragon.mhdc,		//コピー元のデバイスコンテキストのハンドル
-	//	0,						//コピー元の長方形の左上 X座標
-	//	0,						//コピー元の長方形の左上 Y座標
-	//	bmp_dragon.width,		//コピー元の長方形の右下 X座標
-	//	bmp_dragon.height,		//コピー元の長方形の左上 Y座標
-	//	SRCCOPY					//ラスタオペレーションを指定
-	//);
+		//StretchBlt(
+		//	hdc,					//コピー先のデバイスコンテキストのハンドル
+		//	bmp_dragon.x,			//コピー先の長方形の左上 X座標
+		//	bmp_dragon.y,			//コピー先の長方形の左上 Y座標
+		//	bmp_dragon.width*rate,	//コピー先の長方形の右下 X座標
+		//	bmp_dragon.height*rate,	//コピー先の長方形の右下 X座標
+		//	bmp_dragon.mhdc,		//コピー元のデバイスコンテキストのハンドル
+		//	0,						//コピー元の長方形の左上 X座標
+		//	0,						//コピー元の長方形の左上 Y座標
+		//	bmp_dragon.width,		//コピー元の長方形の右下 X座標
+		//	bmp_dragon.height,		//コピー元の長方形の左上 Y座標
+		//	SRCCOPY					//ラスタオペレーションを指定
+		//);
 
-	////+++++ 画像を反転させる ++++++++++++++++++++
+		////+++++ 画像を反転させる ++++++++++++++++++++
 
-	////ビットマップの表示位置を設定
-	//bmp_dragon.x = 400;
-	//bmp_dragon.y = 400;
+		////ビットマップの表示位置を設定
+		//bmp_dragon.x = 400;
+		//bmp_dragon.y = 400;
 
-	////拡大縮小率
-	//rate = 0.75;
+		////拡大縮小率
+		//rate = 0.75;
 
-	////コピー先の長方形の右下の座標に、マイナスを付加すると反転する
-	////左右反転
-	//StretchBlt(
-	//	hdc,						//コピー先のデバイスコンテキストのハンドル
-	//	bmp_dragon.x,				//コピー先の長方形の左上 X座標
-	//	bmp_dragon.y,				//コピー先の長方形の左上 Y座標
-	//	-(bmp_dragon.width*rate),	//コピー先の長方形の右下 X座標
-	//	bmp_dragon.height*rate,		//コピー先の長方形の右下 X座標
-	//	bmp_dragon.mhdc,			//コピー元のデバイスコンテキストのハンドル
-	//	0,							//コピー元の長方形の左上 X座標
-	//	0,							//コピー元の長方形の左上 Y座標
-	//	bmp_dragon.width,			//コピー元の長方形の右下 X座標
-	//	bmp_dragon.height,			//コピー元の長方形の左上 Y座標
-	//	SRCCOPY						//ラスタオペレーションを指定
-	//);
+		////コピー先の長方形の右下の座標に、マイナスを付加すると反転する
+		////左右反転
+		//StretchBlt(
+		//	hdc,						//コピー先のデバイスコンテキストのハンドル
+		//	bmp_dragon.x,				//コピー先の長方形の左上 X座標
+		//	bmp_dragon.y,				//コピー先の長方形の左上 Y座標
+		//	-(bmp_dragon.width*rate),	//コピー先の長方形の右下 X座標
+		//	bmp_dragon.height*rate,		//コピー先の長方形の右下 X座標
+		//	bmp_dragon.mhdc,			//コピー元のデバイスコンテキストのハンドル
+		//	0,							//コピー元の長方形の左上 X座標
+		//	0,							//コピー元の長方形の左上 Y座標
+		//	bmp_dragon.width,			//コピー元の長方形の右下 X座標
+		//	bmp_dragon.height,			//コピー元の長方形の左上 Y座標
+		//	SRCCOPY						//ラスタオペレーションを指定
+		//);
 
-	////+++++ 半透明な画像を表示させる ++++++++++++++++++++
+		////+++++ 半透明な画像を表示させる ++++++++++++++++++++
 
-	////ビットマップの表示位置を設定
-	//bmp_dragon.x = 350;
-	//bmp_dragon.y = 100;
+		////ビットマップの表示位置を設定
+		//bmp_dragon.x = 350;
+		//bmp_dragon.y = 100;
 
-	////拡大縮小率
-	//rate = 2.0;
+		////拡大縮小率
+		//rate = 2.0;
 
-	//BLENDFUNCTION bf;	//ブレンドファンクション構造体
+		//BLENDFUNCTION bf;	//ブレンドファンクション構造体
 
-	//bf.BlendOp = AC_SRC_OVER;		//AC_SRC_OVERのみ
-	//bf.BlendFlags = 0;				//ゼロのみ
-	//bf.AlphaFormat = AC_SRC_ALPHA;	//ビットマップのアルファチャネルを使用
-	//bf.SourceConstantAlpha = 100;	//透明にする割合(透明：0～255：不透明)
+		//bf.BlendOp = AC_SRC_OVER;		//AC_SRC_OVERのみ
+		//bf.BlendFlags = 0;				//ゼロのみ
+		//bf.AlphaFormat = AC_SRC_ALPHA;	//ビットマップのアルファチャネルを使用
+		//bf.SourceConstantAlpha = 100;	//透明にする割合(透明：0～255：不透明)
 
-	//								//半透明で表示
-	//AlphaBlend(
-	//	hdc,						//コピー先のデバイスコンテキストのハンドル
-	//	bmp_dragon.x,				//コピー先の長方形の左上 X座標
-	//	bmp_dragon.y,				//コピー先の長方形の左上 Y座標
-	//	bmp_dragon.width *rate,		//コピー先の長方形の右下 X座標
-	//	bmp_dragon.height*rate,		//コピー先の長方形の右下 X座標
-	//	bmp_dragon.mhdc,			//コピー元のデバイスコンテキストのハンドル
-	//	0,							//コピー元の長方形の左上 X座標
-	//	0,							//コピー元の長方形の左上 Y座標
-	//	bmp_dragon.width,			//コピー元の長方形の右下 X座標
-	//	bmp_dragon.height,			//コピー元の長方形の左上 Y座標
-	//	bf							//ブレンドファンクション構造体
-	//);
+		//								//半透明で表示
+		//AlphaBlend(
+		//	hdc,						//コピー先のデバイスコンテキストのハンドル
+		//	bmp_dragon.x,				//コピー先の長方形の左上 X座標
+		//	bmp_dragon.y,				//コピー先の長方形の左上 Y座標
+		//	bmp_dragon.width *rate,		//コピー先の長方形の右下 X座標
+		//	bmp_dragon.height*rate,		//コピー先の長方形の右下 X座標
+		//	bmp_dragon.mhdc,			//コピー元のデバイスコンテキストのハンドル
+		//	0,							//コピー元の長方形の左上 X座標
+		//	0,							//コピー元の長方形の左上 Y座標
+		//	bmp_dragon.width,			//コピー元の長方形の右下 X座標
+		//	bmp_dragon.height,			//コピー元の長方形の左上 Y座標
+		//	bf							//ブレンドファンクション構造体
+		//);
 
-	////+++++ 画像の背景を透過して拡大・縮小 ++++++++++++++++++++
+		////+++++ 画像の背景を透過して拡大・縮小 ++++++++++++++++++++
 
-	////ビットマップの表示位置を設定
-	//bmp_dragon_mask.x = 250;
-	//bmp_dragon_mask.y = 350;
+		////ビットマップの表示位置を設定
+		//bmp_dragon_mask.x = 250;
+		//bmp_dragon_mask.y = 350;
 
-	//bmp_dragon_white.x = 250;
-	//bmp_dragon_white.y = 350;
+		//bmp_dragon_white.x = 250;
+		//bmp_dragon_white.y = 350;
 
-	////拡大縮小率
-	//rate = 1.50;
+		////拡大縮小率
+		//rate = 1.50;
 
-	////背景とマスクをANDで転送→マスクの黒い部分は無視される
-	//StretchBlt(
-	//	hdc,							//コピー先のデバイスコンテキストのハンドル
-	//	bmp_dragon_mask.x,				//コピー先の長方形の左上 X座標
-	//	bmp_dragon_mask.y,				//コピー先の長方形の左上 Y座標
-	//	-(bmp_dragon_mask.width*rate),	//コピー先の長方形の右下 X座標
-	//	bmp_dragon_mask.height*rate,	//コピー先の長方形の右下 X座標
-	//	bmp_dragon_mask.mhdc,			//コピー元のデバイスコンテキストのハンドル
-	//	0,								//コピー元の長方形の左上 X座標
-	//	0,								//コピー元の長方形の左上 Y座標
-	//	bmp_dragon_mask.width,			//コピー元の長方形の右下 X座標
-	//	bmp_dragon_mask.height,			//コピー元の長方形の左上 Y座標
-	//	SRCPAINT						//ラスタオペレーションを指定
-	//);
+		////背景とマスクをANDで転送→マスクの黒い部分は無視される
+		//StretchBlt(
+		//	hdc,							//コピー先のデバイスコンテキストのハンドル
+		//	bmp_dragon_mask.x,				//コピー先の長方形の左上 X座標
+		//	bmp_dragon_mask.y,				//コピー先の長方形の左上 Y座標
+		//	-(bmp_dragon_mask.width*rate),	//コピー先の長方形の右下 X座標
+		//	bmp_dragon_mask.height*rate,	//コピー先の長方形の右下 X座標
+		//	bmp_dragon_mask.mhdc,			//コピー元のデバイスコンテキストのハンドル
+		//	0,								//コピー元の長方形の左上 X座標
+		//	0,								//コピー元の長方形の左上 Y座標
+		//	bmp_dragon_mask.width,			//コピー元の長方形の右下 X座標
+		//	bmp_dragon_mask.height,			//コピー元の長方形の左上 Y座標
+		//	SRCPAINT						//ラスタオペレーションを指定
+		//);
 
-	////背景とビットマップをORで転送→ビットマップの白い背景は無視される
-	//StretchBlt(
-	//	hdc,							//コピー先のデバイスコンテキストのハンドル
-	//	bmp_dragon_white.x,				//コピー先の長方形の左上 X座標
-	//	bmp_dragon_white.y,				//コピー先の長方形の左上 Y座標
-	//	-(bmp_dragon_white.width*rate),	//コピー先の長方形の右下 X座標
-	//	bmp_dragon_white.height*rate,	//コピー先の長方形の右下 X座標
-	//	bmp_dragon_white.mhdc,			//コピー元のデバイスコンテキストのハンドル
-	//	0,								//コピー元の長方形の左上 X座標
-	//	0,								//コピー元の長方形の左上 Y座標
-	//	bmp_dragon_white.width,			//コピー元の長方形の右下 X座標
-	//	bmp_dragon_white.height,		//コピー元の長方形の左上 Y座標
-	//	SRCAND							//ラスタオペレーションを指定
-	//);
-
-	//▲▲▲▲▲ MY_DRAW_BITMAPを修正 ▲▲▲▲▲
+		////背景とビットマップをORで転送→ビットマップの白い背景は無視される
+		//StretchBlt(
+		//	hdc,							//コピー先のデバイスコンテキストのハンドル
+		//	bmp_dragon_white.x,				//コピー先の長方形の左上 X座標
+		//	bmp_dragon_white.y,				//コピー先の長方形の左上 Y座標
+		//	-(bmp_dragon_white.width*rate),	//コピー先の長方形の右下 X座標
+		//	bmp_dragon_white.height*rate,	//コピー先の長方形の右下 X座標
+		//	bmp_dragon_white.mhdc,			//コピー元のデバイスコンテキストのハンドル
+		//	0,								//コピー元の長方形の左上 X座標
+		//	0,								//コピー元の長方形の左上 Y座標
+		//	bmp_dragon_white.width,			//コピー元の長方形の右下 X座標
+		//	bmp_dragon_white.height,		//コピー元の長方形の左上 Y座標
+		//	SRCAND							//ラスタオペレーションを指定
+		//);
 
 	//ブラシをデフォルトに戻す
 	SelectObject(hdc, GetStockObject(WHITE_BRUSH));
@@ -2575,6 +2603,93 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 //########## どのキーを押しているか判定する関数 ##########
 VOID MY_CHECK_KEYDOWN(VOID)
 {
+
+	//▼▼▼▼▼ MY_CHECK_KEYDOWNを修正 ▼▼▼▼▼
+
+	//GetKeyboardState()関数
+	//引数として、BYTE型の配列(256個)を受け取る
+	//すべての仮想キーの現在の状態を一度に取得する
+	//最上位ビットが 1 のときはキーが押されている
+	//               0 のときはキーが押されていない
+
+	//最下位ビットが 1 のときはキーがトグル状態にある
+	//               0 のときはトグルが解除されている
+	//たとえば、CapsLock キーが ON になっているときは、トグル状態になる。
+
+	//すべての仮想キーの現在の状態を一気に取得する
+	GetKeyboardState(KeyBoard);
+
+	//仮想キーコードで、A～Z、0～9は、ASCIIコードを指定
+	BYTE IskeyDown_W = KeyBoard['W'] & 0x80;
+	BYTE IskeyDown_D = KeyBoard['D'] & 0x80;
+	BYTE IskeyDown_A = KeyBoard['A'] & 0x80;
+	BYTE IskeyDown_S = KeyBoard['S'] & 0x80;
+	BYTE IsKeyDown_B = KeyBoard['B'] & 0x80;
+	BYTE IsKeyDown_P = KeyBoard['P'] & 0x80;
+
+	//Wキーが押されているか判定する
+	if (IskeyDown_W != 0)
+	{
+		ArrowKey[MY_KEY_ARROW_UP] = MY_KEY_DOWN;
+	}
+	else
+	{
+		ArrowKey[MY_KEY_ARROW_UP] = MY_KEY_UP;
+	}
+
+	//Dキーが押されているか判定する
+	if (IskeyDown_D != 0)
+	{
+		ArrowKey[MY_KEY_ARROW_RIGHT] = MY_KEY_DOWN;
+	}
+	else
+	{
+		ArrowKey[MY_KEY_ARROW_RIGHT] = MY_KEY_UP;
+	}
+
+	//Sキーが押されているか判定する
+	if (IskeyDown_S != 0)
+	{
+		ArrowKey[MY_KEY_ARROW_DOWN] = MY_KEY_DOWN;
+	}
+	else
+	{
+		ArrowKey[MY_KEY_ARROW_DOWN] = MY_KEY_UP;
+	}
+
+	//Aキーが押されているか判定する
+	if (IskeyDown_A != 0)
+	{
+		ArrowKey[MY_KEY_ARROW_LEFT] = MY_KEY_DOWN;
+	}
+	else
+	{
+		ArrowKey[MY_KEY_ARROW_LEFT] = MY_KEY_UP;
+	}
+
+	//Bキーが押されているか判定する
+	if (IsKeyDown_B != 0)
+	{
+		ShiftKey = MY_KEY_DOWN;
+	}
+	else
+	{
+		ShiftKey = MY_KEY_UP;
+	}
+
+	//Pキーが押されているか判定する
+	if (IsKeyDown_P != 0)
+	{
+		PlaySoundKey = MY_KEY_DOWN;
+	}
+	else
+	{
+		PlaySoundKey = MY_KEY_UP;
+	}
+
+	return;
+
+	//▲▲▲▲▲ MY_CHECK_KEYDOWNを修正 ▲▲▲▲▲
 
 	//GetKeyState		：キーが押されているか判定
 	//GetAsyncKeyState	：キーが押されている＆前回の情報を取得
@@ -2835,6 +2950,148 @@ VOID MY_FORMAT_KEYCHAR(WPARAM wp, int message)
 	}
 }
 
+//########## 音を鳴らす関数 ##########
+VOID MY_SOUND(VOID)
+{
+	//周波数の参考サイト
+	//https://tomari.org/main/java/oto.html
+	int Doremi[7] = {
+		261,
+		293,
+		329,
+		349,
+		391,
+		440,
+		493
+	};
+
+	//楽譜
+	int Gakuhu[7][2]
+	{
+		{ Doremi[0],500 },
+		{ Doremi[1],500 },
+		{ Doremi[2],500 },
+		{ Doremi[3],500 },
+		{ Doremi[4],500 },
+		{ Doremi[5],500 },
+		{ Doremi[6],500 },
+	};
+
+	//★★★音を再生するモードを切り替え★★★
+	int sound_mode = 5;
+
+	if (PlaySoundKey == MY_KEY_DOWN)
+	{
+		switch (sound_mode)
+		{
+		case 0:
+			//ビープ音を鳴らす
+			//関数呼び出しとサウンド再生は非同期的に行なわれる
+
+			MessageBeep(
+				-1  // サウンドタイプ
+			);
+			Sleep(100);
+
+			//サウンドタイプの種類
+			//-1						コンピュータのスピーカから発生する標準的なビープ音
+			//MB_ICONASTERISK			SystemAsterisk		メッセージ（情報）
+			//MB_ICONEXCLAMATION		SystemExclamation	メッセージ（警告）
+			//MB_ICONHAND				SystemHand			システムエラー
+			//MB_ICONQUESTION			SystemQuestion		メッセージ（問い合わせ）
+			//MB_OK						SystemDefault		一般の警告音
+
+		case 1:
+			//周波数で音を鳴らす
+			//関数呼び出しとサウンド再生は同期的に行なわれる
+
+			Beep(
+				440,	//音の周波数を、37～32767の間の値で指定
+				1000	//音を鳴らす時間をミリ秒単位で指定
+			);
+
+		case 2:
+			//楽譜のように演奏する
+
+			int i;
+			for (i = 0; i < 7; i++)
+			{
+				Beep(Gakuhu[i][0], Gakuhu[i][1]);
+			}
+
+			break;
+
+		case 3:
+			//waveファイルを再生
+
+			//音を再生し続けるのがポイント！
+
+			PlaySound(
+				SOUND_KOUKA_1,	//再生対象のサウンド
+				NULL,			//インスタンスハンドル/ファイルならNULL
+				SND_FILENAME	//ファイル名で指定
+				| SND_LOOP		//サウンドをループ
+				| SND_ASYNC		//サウンドを非同期再生
+			);
+
+			//音を停止する
+			//PlaySound(NULL,NULL,SND_PURGE);
+
+			break;
+
+		case 4:
+			//waveファイルを再生
+
+			//同時再生できないのがポイント！
+
+			PlaySound(
+				SOUND_KOUKA_1,	//再生対象のサウンド
+				NULL,			//インスタンスハンドル/ファイルならNULL
+				SND_FILENAME	//ファイル名で指定
+				| SND_LOOP		//サウンドをループ
+				| SND_ASYNC		//サウンドを非同期再生
+			);
+
+			PlaySound(
+				SOUND_KOUKA_2,	//再生対象のサウンド
+				NULL,			//インスタンスハンドル/ファイルならNULL
+				SND_FILENAME	//ファイル名で指定
+				| SND_SYNC		//サウンドを同期再生
+			);
+
+			break;
+
+		case 5:
+			//mp3ファイルを再生
+			mciSendCommand(
+				open1.wDeviceID, 
+				MCI_PLAY, 
+				MCI_NOTIFY,				//MM_MCINOTIFYを再生終了後,発行
+				(DWORD_PTR)&play1
+			);
+
+			//mp3ファイルを再生
+			mciSendCommand(
+				open2.wDeviceID,
+				MCI_PLAY,
+				MCI_DGV_PLAY_REPEAT,	//ループ再生
+				(DWORD_PTR)&play2
+			);
+
+			//waveファイルを再生
+			mciSendCommand(
+				open3.wDeviceID,
+				MCI_PLAY,
+				MCI_NOTIFY,				//MM_MCINOTIFYを再生終了後,発行
+				(DWORD_PTR)&play3
+			);
+			break;
+
+		}
+	}
+}
+
+
 //########## ウィンドウプロシージャ関数 ##########
 LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
@@ -2964,6 +3221,74 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		//メモリデバイスコンテキストにビットマップを設定
 		SelectObject(bmp_dragon_mask.mhdc, bmp_dragon_mask.hbmp);
 
+		//▼▼▼▼▼ WM_CREATEに追加 ▼▼▼▼▼
+
+		//MP3の情報を設定
+		open1.lpstrDeviceType = TEXT("MPEGVideo");
+		open1.lpstrElementName = SOUND_BGM_MP3_1;
+
+		//MP3を取得
+		res_sound = mciSendCommand(
+			0,
+			MCI_OPEN, 			//デバイスをオープン
+			MCI_OPEN_TYPE		//MP3ファイルの場合
+			| MCI_OPEN_ELEMENT,	//MP3ファイルの場合
+			(DWORD_PTR)&open1);
+
+		//MP3が読み込めなかったとき
+		if (res_sound)
+		{
+			MessageBox(hwnd, ERR_MSG_NO_READ_MP3, ERR_MSG_TITLE, MB_OK);
+		}
+
+		//MP3の情報を設定
+		open2.lpstrDeviceType = TEXT("MPEGVideo");
+		open2.lpstrElementName = SOUND_KOUKA_MP3_1;
+
+		//mciSendCommandでは、waveファイルも読み込み可能
+
+		//MP3を取得
+		mciSendCommand(
+			0,
+			MCI_OPEN, 			//デバイスをオープン
+			MCI_OPEN_TYPE		//MP3ファイルの場合
+			| MCI_OPEN_ELEMENT,	//MP3ファイルの場合
+			(DWORD_PTR)&open2);
+
+		//MP3が読み込めなかったとき
+		if (res_sound)
+		{
+			MessageBox(hwnd, ERR_MSG_NO_READ_MP3, ERR_MSG_TITLE, MB_OK);
+		}
+
+		//waveの情報を設定
+		open3.lpstrDeviceType = (LPCWSTR)MCI_DEVTYPE_WAVEFORM_AUDIO;
+		open3.lpstrElementName = SOUND_KOUKA_1;
+
+		//waveを取得
+		mciSendCommand(
+			0,
+			MCI_OPEN,			//デバイスをオープン
+			MCI_OPEN_TYPE		//waveファイルの場合
+			| MCI_OPEN_TYPE_ID	//waveファイルの場合
+			| MCI_OPEN_ELEMENT,	//waveファイルの場合
+			(DWORD_PTR)&open3);
+
+		//waveが読み込めなかったとき
+		if (res_sound)
+		{
+			MessageBox(hwnd, ERR_MSG_NO_READ_MP3, ERR_MSG_TITLE, MB_OK);
+		}
+
+		//コールバックウィンドウのハンドル
+		//ウインドウプロシージャのウィンドウ
+		//→MM_MCINOTIFYメッセージ処理を記述
+		play1.dwCallback = (DWORD)hwnd; 
+		play2.dwCallback = (DWORD)hwnd;
+		play3.dwCallback = (DWORD)hwnd;
+
+		//▲▲▲▲▲ WM_CREATEに追加 ▲▲▲▲▲
+
 		////タイマーを分解能(10ミリ秒)でセット(開始)
 		//SetTimer(
 		//	hwnd,		//関連付けるウィンドウハンドル
@@ -3005,6 +3330,13 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
 			//ビットマップを移動させる
 			MY_MOVE_BITMAP(&bmp_dragon);
+
+			//▼▼▼▼▼ WM_TIMERに追加 ▼▼▼▼▼
+
+			//音を鳴らす
+			MY_SOUND();
+
+			//▲▲▲▲▲ WM_TIMERに追加 ▲▲▲▲▲
 
 			//無効リージョンを発生
 			//WM_PAINTを、一定時間で呼び出し
@@ -3264,6 +3596,58 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
 		return 0;
 
+		//▼▼▼▼▼ メッセージを追加 ▼▼▼▼▼
+
+	case MM_MCINOTIFY:
+		//MP3を再生
+
+		if (lp == open1.wDeviceID)
+		{
+			//再生が終了したとき
+			if (wp == MCI_NOTIFY_SUCCESSFUL)
+			{
+				//シークバーを先頭に戻す
+				mciSendCommand(
+					open1.wDeviceID,
+					MCI_SEEK,
+					MCI_SEEK_TO_START,
+					0);
+			}
+			return 0;
+		}
+		else if (lp == open2.wDeviceID)
+		{
+			//再生が終了したとき
+			if (wp == MCI_NOTIFY_SUCCESSFUL)
+			{
+				//シークバーを先頭に戻す
+				mciSendCommand(
+					open2.wDeviceID,
+					MCI_SEEK,
+					MCI_SEEK_TO_START,
+					0);
+			}
+			return 0;
+		}
+		else if (lp == open3.wDeviceID)
+		{
+			//再生が終了したとき
+			if (wp == MCI_NOTIFY_SUCCESSFUL)
+			{
+				//シークバーを先頭に戻す
+				mciSendCommand(
+					open3.wDeviceID,
+					MCI_SEEK,
+					MCI_SEEK_TO_START,
+					0);
+			}
+			return 0;
+		}
+
+		break;
+
+		//▲▲▲▲▲ メッセージを追加 ▲▲▲▲▲
+
 	case WM_CLOSE:
 		//閉じるボタンを押したとき
 
@@ -3309,6 +3693,17 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		//メモリデバイスコンテキストを破棄
 		DeleteDC(hdc_double);
 
+		//▼▼▼▼▼ WM_DESTROYに追加 ▼▼▼▼▼
+
+		//MP3ファイルを閉じる
+		mciSendCommand(open1.wDeviceID, MCI_CLOSE, 0, 0);
+		mciSendCommand(open2.wDeviceID, MCI_CLOSE, 0, 0);
+
+		//waveファイルを閉じる
+		mciSendCommand(open3.wDeviceID, MCI_CLOSE, 0, 0);
+
+		//▲▲▲▲▲ WM_DESTROYに追加 ▲▲▲▲▲
+
 		////タイマー１を削除(終了)
 		//KillTimer(hwnd, TIMER_ID_2);
 
@@ -3326,4 +3721,3 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 	//デフォルトのウィンドウプロシージャ関数を呼び出す
 	return DefWindowProc(hwnd, msg, wp, lp);
 }
-*/
