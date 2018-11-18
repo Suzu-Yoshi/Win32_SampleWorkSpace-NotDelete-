@@ -65,10 +65,10 @@
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		//▼▼▼▼▼ WinMainに追加する ▼▼▼▼▼
-		
+
 		//仮想キーコードを文字に変換する
 		TranslateMessage(&msg);
-		
+
 		//▲▲▲▲▲ WinMainに追加する ▲▲▲▲▲
 		DispatchMessage(&msg);
 	}
@@ -117,11 +117,11 @@
 	  コメントアウトする【プログラム参考例を要参照】
 
 
-	  
-	  
-	  
-	  
-	  
+
+
+
+
+
 ◎関数を追加
 
 	//########## どのキーを押しているか判定する関数 ##########
@@ -178,12 +178,12 @@
 		}
 	}
 
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
 	//########## ビットマップを移動させる関数 ##########
 	VOID MY_MOVE_BITMAP(MY_BMP *bmp)
 	{
@@ -214,7 +214,7 @@
 		{
 			bmp->y += Speed;
 		}
-	
+
 		//左矢印キーが押されていれば左に動かす
 		if (ArrowKey[MY_KEY_ARROW_LEFT] == MY_KEY_DOWN)
 		{
@@ -244,8 +244,8 @@
 			wsprintf(Str_KeyState, TEXT("キー状態：--"), wp);
 		}
 
-		
-		
+
+
 		switch (message)
 		{
 			case WM_KEYDOWN:
@@ -641,7 +641,7 @@ VOID MY_FPS_WAIT(VOID);
 //▼▼▼▼▼ プロトタイプ宣言を追加 ▼▼▼▼▼
 
 //仮想キーコードを整形する関数
-VOID MY_FORMAT_KEYCODE(WPARAM,int);
+VOID MY_FORMAT_KEYCODE(WPARAM, int);
 
 //仮想キーコードを文字に整形する関数
 VOID MY_FORMAT_KEYCHAR(WPARAM, int);
@@ -709,7 +709,7 @@ TCHAR Str_KeyValue[64] = TEXT("キー文字：--");
 TCHAR Str_KeyState[64] = TEXT("キーの状態:--");
 
 //矢印キーの状態を入れる配列
-int ArrowKey[4] = { 
+int ArrowKey[4] = {
 	MY_KEY_UP,
 	MY_KEY_UP,
 	MY_KEY_UP,
@@ -835,7 +835,7 @@ int WINAPI WinMain(
 	//		}
 	//	}
 	//}
-	
+
 	return msg.wParam;
 }
 
@@ -2349,7 +2349,7 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 		bmp_dragon.width,	//ビットマップをどこまでコピーするか(X座標)
 		bmp_dragon.height,	//ビットマップをどこまでコピーするか(Y座標)
 		GetPixel(bmp_dragon.mhdc, 0, 0));//透過色を指定
-	
+
 	//▲▲▲▲▲ MY_DRAW_BITMAPに追加 ▲▲▲▲▲
 
 	//▼▼▼▼▼ MY_DRAW_BITMAPを修正 ▼▼▼▼▼
@@ -2578,14 +2578,15 @@ VOID MY_DRAW_BITMAP(HDC hdc)
 //########## どのキーを押しているか判定する関数 ##########
 VOID MY_CHECK_KEYDOWN(VOID)
 {
+
 	//★★★修正箇所★★★
 
 	//GetKeyState		：キーが押されているか判定
 	//GetAsyncKeyState	：キーが押されている＆前回の情報を取得
 	//					：戻り値の最上位ビットが1(& 0x8000)なら、押されている
 	//					：戻り値の最下位ビットが1(& 0x0001)なら、前回から押されている
-	//					：戻り値　　　　　　　が0		   なら、押されていない					
-	
+	//					：戻り値　　　　　　　が0		   なら、押されていない
+
 	SHORT IskeyDown_Up		= GetAsyncKeyState(VK_UP) & 0x8000;
 	SHORT IskeyDown_Right	= GetAsyncKeyState(VK_RIGHT) & 0x8000;
 	SHORT IskeyDown_Down	= GetAsyncKeyState(VK_DOWN) & 0x8000;
@@ -2603,7 +2604,7 @@ VOID MY_CHECK_KEYDOWN(VOID)
 	}
 
 	//右矢印キーが押されているか判定する
-	if (IskeyDown_Right != 0)
+	if (IskeyDown_Right !=  0)
 	{
 		ArrowKey[MY_KEY_ARROW_RIGHT] = MY_KEY_DOWN;
 	}
@@ -2641,6 +2642,7 @@ VOID MY_CHECK_KEYDOWN(VOID)
 	{
 		ShiftKey = MY_KEY_UP;
 	}
+	
 
 	//修正前のプログラムはコメントアウト
 	////上矢印キーが押されているか判定する
@@ -2698,7 +2700,7 @@ VOID MY_CHECK_KEYDOWN(VOID)
 //########## ビットマップを移動させる関数 ##########
 VOID MY_MOVE_BITMAP(MY_BMP *bmp)
 {
-	
+
 	//シフトキーが押されているときは早く動ける
 	if (ShiftKey == MY_KEY_DOWN)
 	{
@@ -2726,18 +2728,18 @@ VOID MY_MOVE_BITMAP(MY_BMP *bmp)
 	{
 		bmp->y += Speed;
 	}
-	
+
 	//左矢印キーが押されていれば左に動かす
 	if (ArrowKey[MY_KEY_ARROW_LEFT] == MY_KEY_DOWN)
 	{
 		bmp->x -= Speed;
 	}
 
-	
+
 }
 
 //########## キーボードの仮想キーコードを整形する関数 ##########
-VOID MY_FORMAT_KEYCODE(WPARAM wp,int message)
+VOID MY_FORMAT_KEYCODE(WPARAM wp, int message)
 {
 	//シフトキーを押しているか判断
 	if (GetKeyState(VK_SHIFT) < 0)	//キーが押されているとき
@@ -2746,7 +2748,7 @@ VOID MY_FORMAT_KEYCODE(WPARAM wp,int message)
 		wsprintf(Str_KeyState, TEXT("キー状態：Shift：%0X"), wp);
 	}
 	//Ctrlキーを押しているか判断
-	else if(GetKeyState(VK_CONTROL) < 0)	//キーが押されているとき
+	else if (GetKeyState(VK_CONTROL) < 0)	//キーが押されているとき
 	{
 		//キーコードを文字列として整形
 		wsprintf(Str_KeyState, TEXT("キー状態：Ctrl：%0X"), wp);
@@ -2760,48 +2762,48 @@ VOID MY_FORMAT_KEYCODE(WPARAM wp,int message)
 
 	switch (message)
 	{
-		case WM_KEYDOWN:
-			//キーを押したとき
+	case WM_KEYDOWN:
+		//キーを押したとき
 
+		//キーコードを文字列として整形
+		wsprintf(Str_KeyCode, TEXT("キーコード：%0X"), wp);
+
+		break;
+
+	case WM_KEYUP:
+		//キーを上げたとき
+
+		//キーコードを文字列として整形
+		wsprintf(Str_KeyCode, TEXT("キーコード：--"));
+
+		break;
+
+	case WM_SYSKEYDOWN:
+		//システムキーを押したとき
+
+		//Altキーを押したとき
+		if (wp == VK_MENU)
+		{
 			//キーコードを文字列として整形
-			wsprintf(Str_KeyCode, TEXT("キーコード：%0X"), wp);
+			wsprintf(Str_KeyCode, TEXT("システムキーコード：Alt：%0X"), wp);
+		}
 
-			break;
+		break;
 
-		case WM_KEYUP:
-			//キーを上げたとき
+	case WM_SYSKEYUP:
+		//システムキーを上げたとき
 
-			//キーコードを文字列として整形
-			wsprintf(Str_KeyCode, TEXT("キーコード：--"));
+		//キーコードを文字列として整形
+		wsprintf(Str_KeyCode, TEXT("システムキーコード：--"));
 
-			break;
-
-		case WM_SYSKEYDOWN:
-			//システムキーを押したとき
-
-			//Altキーを押したとき
-			if (wp == VK_MENU)
-			{
-				//キーコードを文字列として整形
-				wsprintf(Str_KeyCode, TEXT("システムキーコード：Alt：%0X"), wp);
-			}
-
-			break;
-
-		case WM_SYSKEYUP:
-			//システムキーを上げたとき
-
-			//キーコードを文字列として整形
-			wsprintf(Str_KeyCode, TEXT("システムキーコード：--"));
-
-			break;
+		break;
 	}
 }
 
 //########## 仮想キーコードを文字に整形する関数 ##########
 VOID MY_FORMAT_KEYCHAR(WPARAM wp, int message)
 {
-	
+
 	switch (message)
 	{
 	case WM_CHAR:
@@ -3264,7 +3266,7 @@ LRESULT CALLBACK MY_WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 		MY_FORMAT_KEYCHAR(wp, msg);
 
 		return 0;
-		
+
 	case  WM_SYSCHAR:
 
 		//仮想システムキーコードを文字に変換したとき
