@@ -14,4 +14,96 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="sample001.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample002.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample003.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample004.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample005.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Sample006.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample007.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample008p.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample009.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample010.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample010_CHOUSA.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample011.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample011_LOOP.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample012.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample013.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample014.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample015.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample016.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample016_2.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample016_old.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample017.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample018.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample019.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample020.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample021.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample022.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample022_fps.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample023.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample023_old.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="sample024.cpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>

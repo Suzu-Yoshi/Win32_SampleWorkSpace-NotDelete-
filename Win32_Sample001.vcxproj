@@ -18,6 +18,38 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="sample001.cpp" />
+    <ClCompile Include="sample002.cpp" />
+    <ClCompile Include="sample003.cpp" />
+    <ClCompile Include="sample004.cpp" />
+    <ClCompile Include="sample005.cpp" />
+    <ClCompile Include="Sample006.cpp" />
+    <ClCompile Include="sample007.cpp" />
+    <ClCompile Include="sample008p.cpp" />
+    <ClCompile Include="sample009.cpp" />
+    <ClCompile Include="sample010.cpp" />
+    <ClCompile Include="sample010_CHOUSA.cpp" />
+    <ClCompile Include="sample011.cpp" />
+    <ClCompile Include="sample011_LOOP.cpp" />
+    <ClCompile Include="sample012.cpp" />
+    <ClCompile Include="sample013.cpp" />
+    <ClCompile Include="sample014.cpp" />
+    <ClCompile Include="sample015.cpp" />
+    <ClCompile Include="sample016.cpp" />
+    <ClCompile Include="sample016_2.cpp" />
+    <ClCompile Include="sample016_old.cpp" />
+    <ClCompile Include="sample017.cpp" />
+    <ClCompile Include="sample018.cpp" />
+    <ClCompile Include="sample019.cpp" />
+    <ClCompile Include="sample020.cpp" />
+    <ClCompile Include="sample021.cpp" />
+    <ClCompile Include="sample022.cpp" />
+    <ClCompile Include="sample022_fps.cpp" />
+    <ClCompile Include="sample023.cpp" />
+    <ClCompile Include="sample023_old.cpp" />
+    <ClCompile Include="sample024.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{7732EA6A-0C77-4BBD-B47F-9123E2B48589}</ProjectGuid>
